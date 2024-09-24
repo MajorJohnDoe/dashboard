@@ -6,13 +6,14 @@
 Dashboard for personal use. Task management and stickynotes. This project serves as my exploration into HTMX, combining practical utility with modern web development techniques.
 
 Version 1.0.0
+
 ### Key features
 
 - Task management
-- Sticky notes
+- Sticky notes library, somtimes we just want to save good notes.
 - Create sticky notes with voice-to-text transcription for easier note-taking. The app requires an OpenAI API key for speech recognition.
-- TinyMCE integration for rich text editing
-- Built with HTMX for dynamic content updates
+- TinyMCE integration for rich text editing.
+- Built with HTMX for dynamic content updates.
 
 While the core functionality is largely complete, I'm continuously working on expanding features and refining the user experience. This project showcases a personalized approach to productivity tools, tailored to individual workflow preferences.
 
