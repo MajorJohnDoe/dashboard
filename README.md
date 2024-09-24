@@ -36,12 +36,25 @@ Npm
 
 **Set up your PHP environment:**
 
-    - Copy config.example.php to config.php and update the configuration settings as needed.
+    - Rename config.example.php to config.php and update the configuration settings as needed. Database connection etc. Both MariaDB and MySQL should work.
 
-(Optional) If using a database, set up your database and update the connection details in config.php. Both MariaDB and MySQL should work.
+**Database Setup:**
+
+This project uses MariaDB. To set up the database and load test data:
+
+1. Ensure you have MariaDB installed and running.
+2. Open a terminal and connect to your MariaDB server.
+3. Run the following command to create the database, tables, and insert test data:
+
+   ```
+   mysql -u your_username -p < path/to/database_setup.sql
+   ```
+
+This will create the necessary tables and insert some test data to get you started. Or just use PHPMyAdmin and import the sql-file into the database.
+
 
 ## Usage
-Access the dashboard through your web browser by navigating to the configured domain or localhost address. You should be directed to a login page where you can login with username: johndoe and password: password.
+Access the dashboard through your web browser by navigating to the configured domain or localhost address. You should be directed to a login page where you can login with **username: johndoe and password: password**.
 
 Features
 
