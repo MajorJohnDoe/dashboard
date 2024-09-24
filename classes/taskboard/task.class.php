@@ -170,13 +170,14 @@ class Task {
         $d = \DateTime::createFromFormat('Y-m-d', $date);
         if ($d && $d->format('Y-m-d') === $date) {
             $sql = "SELECT task.* 
-                    FROM `tm_task` task
+                    FROM 
+                        `tm_task` task
                     LEFT JOIN 
-                        `tm_board` board 
-                            ON 	board.id = task.board_id AND 
-                                board.user_id = ? AND
-                                board.id = ?
-                    WHERE DATE(task.`task_resolved_date`) = ?";
+                        `tm_board` board ON board.`id` = task.`board_id`
+                    WHERE 
+                        board.`user_id` = ? AND 
+                        board.`id` = ? AND 
+                        DATE(task.`task_resolved_date`) = ?";
     
             $results = $this->db->q($sql, "iis", $userId, $boardId, $date);
             return $results !== false ? $results : [];
