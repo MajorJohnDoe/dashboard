@@ -1,7 +1,9 @@
 # Dashboard - A meaningful life with tasks
 
+![View over a task management board](screenshot_header.jpg)
+
 ## Description
-Dashboard for personal use. Task management and stickynotes, my way of trying out HTMX.
+Dashboard for personal use. Task management and stickynotes, my way of trying out HTMX. We are still lacking some features but the core functionality is mostly finished.
 
 Version
 
