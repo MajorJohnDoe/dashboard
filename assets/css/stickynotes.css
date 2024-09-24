@@ -1,0 +1,164 @@
+.sn-container {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 100px);
+}
+
+.sn-header { 
+    width: 100%;
+    height: 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 20px;
+    background-color: #abb9c5;
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.sn-body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+.sn-sidebar {
+    width: 18rem;
+    min-width: 16rem;
+    padding: 20px 10px 20px 10px;
+    overflow-y: auto;
+}
+
+.sn-content {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+#regular-notes {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    align-content: start;
+}
+
+.sn-content-header {
+    margin-bottom: 20px;
+    background-color: #bdcddb; /* Different background color for the header */
+    border-radius: 0.5rem;
+}
+
+
+/* New styles for search results */
+.sn-search-results {
+/*     display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px; */
+    /* margin-bottom: 3rem; */
+}
+
+.sn-search-results h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: #273847;
+}
+
+.sn-search-results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 20px;
+    /* max-height: 500px; */ /* Limit the height of search results */
+    /* overflow-y: auto; */
+}
+
+
+
+
+.sn-category-list {
+    list-style-type: none;
+    padding: 0;
+}
+
+.sn-category-list a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    padding: 0.25rem;
+    color: #273847;
+    justify-content: space-between;
+}
+
+.sn-category-list a:hover { 
+    background-color: #d6dee9;
+}
+
+.sn-category-color {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.sn-category-count {
+    margin-left: auto;
+    color: #666;
+}
+
+.sn-note {
+    background-color: #fff;
+    border-radius: 0.5rem;
+    padding: 15px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    max-height: 17rem;
+    overflow: hidden;
+    min-height: 13rem;
+}
+
+.sn-note:hover { 
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+    cursor: pointer;
+}
+
+.sn-note-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.sn-note-category, .sn-note-year {
+    font-size: 0.8em;
+    color: #666;
+}
+
+.sn-note-title {
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.sn-note-authors {
+    color: #555;
+}
+
+
+
+
+
+/* You may want to keep your media query, adjusting class names as needed */
+/*
+@media (max-width: 768px) {
+    .sn-body {
+        flex-direction: column;
+    }
+
+    .sn-sidebar {
+        width: 100%;
+        max-height: 200px;
+    }
+
+    .sn-content {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+}
+*/

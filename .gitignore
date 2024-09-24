@@ -1,0 +1,17 @@
+# Ignore node_modules directory
+node_modules/
+
+# Ignore system files
+.DS_Store
+
+# Ignore log files
+*.log
+   
+# Ignore config.php
+config.php
+
+# Ignore contents of user_upload and user_upload_temp directories, but not the directories themselves
+user_upload/*
+!user_upload/.gitkeep
+user_upload_temp/*
+!user_upload_temp/.gitkeep

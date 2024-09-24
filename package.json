@@ -1,0 +1,10 @@
+{
+    "name": "dashboard",
+    "version": "1.0.0",
+    "description": "Dashboard for personal use. Task management and stickynotes.",
+    "private": true,
+    "dependencies": {
+      "tinymce": "^7.0.1",
+      "sortablejs": "1.15.2"
+    }
+}

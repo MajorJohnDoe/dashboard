@@ -1,0 +1,520 @@
+#taskboard-container {
+    height: 100%;
+    width: 100%;
+}
+
+#taskboard-container .columns-container {
+    display: grid;
+    /* grid-template-columns: repeat(3, 1fr);  *//* 6 columns to accommodate each grid_item */
+    grid-template-columns: repeat(auto-fit, minmax(0px, 1fr));
+    grid-gap: 0.7%;
+    height: 100%;
+    width: 100%;
+    /* padding: 0.5rem; */
+}
+
+#taskboard-container .columns-container .task-column { /* need this to stretch height */
+    display: flex;
+    flex-direction: column;
+    height: 100%; /* This ensures the column takes the full height of its container */
+    box-sizing: border-box;
+    overflow: hidden; /* Prevents the column itself from scrolling */
+}
+
+#taskboard-container ul {
+    background-color: #465561;
+    border: 0.1rem solid #414b55;
+    border-top-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    border-bottom-left-radius: 0.5rem;
+    /* display: flex; */
+/*     flex-direction: column;
+    justify-content: stretch;
+    align-items: stretch; */
+    padding: 0.7rem;
+    height: 100%;
+}
+
+#taskboard-container .column-header {
+    display: flex;
+    flex-wrap: nowrap;
+    font-size: 110%;
+}
+
+#taskboard-container .column-name {
+    flex-basis: 50%;
+    box-sizing: border-box;
+    font-weight: 500;
+}
+
+#taskboard-container .column-icons {
+    display: flex;
+    flex-basis: 50%;
+    box-sizing: border-box;
+    justify-content: right;
+    align-items: end;
+}
+
+#taskboard-container .column-icons .icon {
+    background: #465561;
+    padding: 0.1rem 0.4rem;
+    border-top-left-radius: 0.3rem;
+    border-top-right-radius: 0.3rem;
+    border-top: 0.1rem solid #414b55;
+    border-left: 0.1rem solid #414b55;
+    border-right: 0.1rem solid #414b55;
+    margin-left: 5px;
+    cursor: pointer;
+}
+
+#taskboard-container .column-icons .icon:hover {
+    background: #3a4751;
+    color: #70ed86;
+}
+
+#taskboard-container .column-icons .add-task {
+    font-size: 130%;
+    font-weight: 600;
+    padding: 0 1rem;
+}
+
+#taskboard-container .sortable-list {
+    flex-grow: 1; 
+    overflow-y: auto; 
+    padding: 0.5rem; 
+    margin: 0; 
+    box-sizing: border-box;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(59 82 103) #232d35; 
+}
+
+
+#taskboard-container .sortable-item { cursor: grab; }
+#taskboard-container .move-column-temp-bg .sortable-list{ background-color: #466157 !important; }
+#taskboard-container .move-task-temp-bg { background-color: #26493e;  }
+
+/*     #task-column-container ul li:nth-child(1) {
+    background: red;
+}
+
+#task-column-container ul li:nth-child(2) {
+    background: green;
+} */
+
+#taskboard-container ul > .widget:not(:last-child) {
+    margin-bottom: 1rem;
+}
+
+.tm-task { 
+    background: #2c3842;
+    /* border: 0.2rem solid #2e435d; */
+    color: #e5edf8;
+    position: relative;
+    border-left: 0.4rem solid #aacf9c;
+    border-radius: 0.3rem;
+    min-height: 4rem;
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    padding: 0.6rem 0.6rem 0.6rem 0.6rem;
+}
+
+.tm-card-lcolor {
+    background-color: #445461;
+}
+
+.tm-task:hover { 
+    background: #33414d;
+    cursor: pointer;
+}
+
+.tm-task.priority-lowest { border-left: 0.4rem solid #9ccccf; }
+.tm-task.priority-low { border-left: 0.4rem solid #86c96d; }
+.tm-task.priority-alarming { border-left: 0.4rem solid #cbcd69; }
+.tm-task.priority-critical { border-left: 0.4rem solid #d5913c; }
+.tm-task.priority-highest { border-left: 0.4rem solid #dd6161; }
+
+.tm-task .title { 
+    font-weight:400; 
+    line-height: 1.5rem;
+    font-size: 100%;
+    word-break: break-word;
+}
+.tm-task .labels { color: #ccc; margin-top: 0.3rem;}
+.tm-task .labels div { 
+    font-size: 93%; 
+    display:inline-block;
+    border-radius: 0.2rem;
+    color: #000;
+    font-weight: 500;
+    padding: 0.125rem 0.4375rem;
+    margin: 0.2rem 0.3rem 0 0;
+    font-weight: 600;
+}
+
+.tm-task .completed { 
+    display: inline-block;
+    border-radius: 0.5rem;
+    color: rgb(163, 163, 163);
+    background-color: #242e37;
+    width: 3rem;
+    height: 1.8rem; 
+    display: flex;
+    justify-content: center;
+    align-items: center;
+/*        position: absolute;
+    top: 0.5rem;
+    right:0.5rem;    */
+}
+
+.tm-task .perc100 { color: #45b475; }
+.tm-task .perc80 { color: #4e996e; }
+.tm-task .perc50 { color: #7c994e; }
+.tm-task .perc30 { color: #99854e; }
+.tm-task .perc10 { color: #994e4e; }
+
+
+.task-edit-grid {
+    display: grid;
+    grid-template-columns: 4fr 1fr; 
+    gap: 1px;
+    background-color: #efeff7;
+    /* overflow: auto;  */
+    max-height: calc(100vh - 30px); 
+}
+
+.task-edit-grid .right-column,
+.task-edit-grid .left-column,
+.task-edit-grid .form-actions {
+    background-color: white;
+    padding: 0.5rem;
+}
+
+.task-edit-grid .right-column {
+    width: auto; 
+    background-color: #f5f5f5;
+}
+/* .task-edit-grid .left-column {
+
+} */
+
+.task-edit-grid .form-actions {
+    grid-column: 1 / span 2;
+}
+
+#checklist-container {
+    display: flex;
+    flex-direction: column; /* Ensures elements stack vertically */
+    max-height: calc(100vh - 46rem); /* Adjust this value based on your header, footer, etc. */
+    overflow: auto; /* Adds scroll to the checklist if it exceeds max-height */
+}
+
+.task-checklist-container .flex-row:nth-child(odd) {
+    background-color: #f9f9f9; /* Light gray for odd rows */
+}
+
+.task-checklist-container .flex-row:nth-child(even) {
+    background-color: #e9ecef; /* Slightly darker gray for even rows */
+}
+
+.task-checklist-container .flex-row:hover {
+    background: #d7ebff;
+}
+
+.task-checklist-container .flex-cell {
+    padding: 0.1rem;
+}
+
+.task-checklist-container  input[type="text"] {
+    width: 100%;
+    /* padding: 8px 12px;
+    border: 1px solid #ccc; */
+    border: none;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background: transparent;
+    transition: border-color 0.3s ease-in-out; /* Smooth transition for styling changes */
+}
+
+.task-checklist-container input[type="text"]:focus {
+    border-color: #0f5aaa; /* Highlight the border to indicate focus */
+    outline: none; /* Remove default focus outline */
+    background: #f9fafb;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25); /* Add a soft glow to emphasize focus */
+}
+
+#form_addTask #search-label {
+    width: 13rem; 
+    background-image: url(/assets/img/icon_label.png); 
+    background-repeat: no-repeat; 
+    background-size: 1.3rem; 
+    padding-left: 2rem; 
+    background-position: 0.3rem 0.5rem;
+}
+
+#form_addTask #search-label-result-wrap {
+    overflow: hidden;
+    display: inline-block;
+    border-radius: 0.5rem;
+    position: absolute;
+    border: 1px solid #b8b8b8;
+    z-index: 1000;
+    top: 98%;
+    left: 0%;
+    box-shadow: rgba(0, 0, 0, 0.1) 1px 5px 8px;
+}
+
+#form_addTask #search-label-result {
+    background: #fff;
+    min-width: 16rem;
+    width: auto;
+    min-height: 10rem;
+    max-height: 30rem;
+    overflow-x: hidden;
+    overflow-y: scroll;
+    padding: 0 0.5rem 1rem;
+    display: none;
+}
+
+#selectedLabelsContainer span { 
+    margin: 0.2rem 0.3rem 0.2rem 0;
+    padding: 0.185rem 0.4375rem;
+    font-weight: 600;
+    border-radius: 0.3rem;
+    display: inline-block;
+}
+
+/* Column list in edit board dialog */
+.edit-board-column-list .flex-row .flex-cell { 
+    background-color: rgb(45 116 173 / 25%);;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 5rem;
+    margin: 0 5px 0 0;
+    border-radius: 0.5rem;
+    color: rgb(67 88 105);
+}
+
+.board-members-container {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5rem; 
+}
+
+.board-members {
+    background: #ccc; 
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center; 
+    justify-content: center; 
+}
+
+
+.task-priority-container .task-priority-input { 
+    display: none; 
+}
+
+.task-priority-container .task-priority-label {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    padding: 0.5rem;
+    margin-bottom: 0.2rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+    position: relative;
+    border-radius: 0.5rem;
+}
+
+.task-priority-container .priority-lowest { 
+    background: #9ccccf; 
+    color: #076c73; 
+}
+.task-priority-container .priority-low { 
+    background: #aacf9c; 
+    color: #247d02; 
+}
+.task-priority-container .priority-alarming { 
+    background: #cecf9c; 
+    color: #656700; 
+}
+.task-priority-container .priority-critical { 
+    background: #cfb49c; 
+    color: #755700; 
+}
+.task-priority-container .priority-highest { 
+    background: #cf9c9c; 
+    color: #890000; 
+}
+.task-priority-label:hover { opacity: 0.9; }
+.task-priority-container .task-priority-input:checked + 
+.task-priority-label {
+    border-color: #3f3f3f;
+    font-weight: bold;
+}
+.task-priority-container .task-priority-input:checked + 
+.task-priority-label::after {
+    content: '✓';
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+/* Label picker for tasks */
+.task-label-picker label { cursor: pointer; }
+.task-label-picker label:hover { opacity: 0.8; }
+.task-label-picker button {
+    display: inline-block;
+    margin: 0;
+    margin-left: 0.3rem;
+    height: 100%;
+    padding: 0 0.5rem;
+    font-size: 140%;
+}
+
+/*Color picker for labels on tasks*/
+.color-selector {
+    display: flex;
+    flex-wrap: wrap;
+}
+.color-selector .color-swatch {
+    display: inline-block;
+    width: 2rem;
+    height: 2rem;
+    margin: 0.13rem;
+    cursor: pointer;
+    border: 0.2rem solid #ffffff;
+    border-radius: 4px;
+}
+.color-selector .color-swatch:hover {
+    border-color: #000; 
+}
+.color-selector input[type="radio"]:checked + .color-swatch {
+    border-color: #000; 
+}
+
+/* TinyMCE Settings */
+.tox-tinymce { border: 1px solid #b8b8b8 !important; }
+.tox.tox-tinymce-aux { width: auto !important; }
+.tox .tox-toolbar__group { padding: 0 0px 0 0px !important; }
+.tox.tox-tinymce.tox-fullscreen .tox-editor-container {
+    margin: auto;
+    width: 70rem;
+    max-width: 100% !important;
+    max-height: 100vh;
+    box-shadow: 0px 0px 30px rgba(0,0,0,0.4);
+    overflow: hidden;
+    border-radius: 0.5rem;
+}
+.tox.tox-tinymce.tox-fullscreen {
+    background-color: rgba(0, 0, 0, 0.5) !important;
+    border-radius: 0;
+    border: none !important;
+}
+.tox.tox-tinymce.tox-fullscreen button[data-mce-name="savetask"] {
+    width: auto !important;
+    background: #2a956e !important;
+    color: white !important;
+    font-weight: 400;
+    cursor: pointer !important;
+    position: absolute;
+    right: 0;
+    margin-right: 1rem;
+}
+.tox.tox-tinymce.tox-fullscreen button[data-mce-name="savetask"] span {
+    cursor: pointer;
+    padding: 0.5rem 1rem;
+}
+
+
+
+/* History calendar for task board */
+.calendar-navigation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px; /* Adds space between the elements */
+    padding: 10px 0; /* Adds some vertical padding */
+    max-height: 8%;
+}
+/* Calendar 100% height */
+#calendar { 
+    height: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: stretch;
+    margin-top: 0.5rem;
+}
+
+
+#calendar .th { flex: 30px 0 0; }
+#calendar .th span { background-color: #bdcfe1; }
+#calendar .week {
+    flex: 30px 1 0;
+    border-bottom: 1px solid #ccc;    
+}
+
+/* Calendar rows */
+#calendar .th, #calendar .week { 
+    display: flex; 
+    height: calc(100% - 8rem);
+    max-height: calc(100% - 8%);
+}
+#calendar .th>span {
+    display: flex;
+    justify-content: center; 
+    align-items: center; 
+    border-bottom: 4px solid rgba(255,0,0,0.3);
+    font-weight: 600;
+}
+#calendar .week>div {
+    border: 1px solid #eee;
+    padding: 30px 2px 30px;
+    min-height: 50px;
+    position: relative; 
+    overflow-y: auto;
+}
+#calendar .th>span, #calendar .week>div {
+    width: 100%;
+    margin-right: 5px;
+    color: #333;
+}
+/* Dates */
+#calendar .week>div::after {
+    content: attr(data-date);
+    display: block;
+    position: absolute;
+    top: 0; right: 2px;
+    color: #777;
+    font-size: 110%;
+}
+/* Weekends */
+#calendar .th>span:nth-last-child(-n+2) {
+    background-color: #aabdd1;
+}
+
+#calendar .week>div:nth-last-child(-n+2) { background: #f3f3f3; }
+
+#calendar .th>span:last-child, 
+#calendar .week>div:last-child { margin-right:0; }
+
+#calendar .week .week-number { 
+    background: rgb(241,243,244) !important;
+    color: rgb(60, 64, 67);
+    text-align: center;
+    max-width: 3rem;
+    min-width: 3rem;
+    font-weight: 600;
+}
+#calendar .th>span:first-child { 
+    min-width: 3rem;
+    max-width: 3rem;
+    background: rgb(241,243,244) !important;
+    color: rgb(60, 64, 67);
+}
