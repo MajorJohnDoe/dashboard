@@ -152,12 +152,13 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                     <div class="flex-cell flex-cell-shrink flex-vertical-center" style="position: relative;">
                                         <div style="position: relative;">
                                             <input 
+                                                class="fa-solid fa-tags"
                                                 autocomplete="off"
                                                 type="search" 
                                                 name="search-label" 
                                                 id="search-label" 
                                                 placeholder="Search for label" 
-                                                hx-get="/task/label/search"
+                                                hx-post="/task/label/search"
                                                 hx-trigger="input changed delay:100ms, focus, search-label"
                                                 hx-target="#search-label-result" 
                                                 hx-swap="innerHTML"

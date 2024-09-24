@@ -194,9 +194,6 @@
     width: auto; 
     background-color: #f5f5f5;
 }
-/* .task-edit-grid .left-column {
-
-} */
 
 .task-edit-grid .form-actions {
     grid-column: 1 / span 2;

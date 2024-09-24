@@ -3,12 +3,11 @@ use Dashboard\Taskboard\BoardController;
 use Dashboard\Taskboard\ColumnController;
 use Dashboard\Taskboard\Task;
 
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 // Initialize task board object
 $board = new BoardController($db, $user);
+
+// Initialize array to hold active labels
+$activeLabels = [];
 
 // Load board data
 $boardData = $board->loadBoardDataById($user->getActiveTaskBoard());
@@ -40,7 +39,7 @@ function safeGet($array, $key, $default = '') {
 // Function to render label checkbox
 function renderLabelCheckbox($label, $isChecked = false) {
     $checked = $isChecked ? 'checked' : '';
-    $labelId = safeGet($label, 'id', safeGet($label, 'label_id', ''));
+    $labelId = safeGet($label, 'id', '');
     $labelName = safeGet($label, 'label_name', 'Unnamed Label');
     $labelColor = safeGet($label, 'label_color', '#CCCCCC');
 
@@ -55,7 +54,10 @@ function renderLabelCheckbox($label, $isChecked = false) {
 }
 
 // Determine if search label is set
-$searchLabelSet = isset($_GET['search-label']) && strlen($_GET['search-label']) > 0;
+$searchLabelSet = isset($_REQUEST['search-label']) && strlen($_REQUEST['search-label']) > 0;
+
+// Get selected labels
+$selectedLabels = isset($_REQUEST['selectedLabels']) && is_array($_REQUEST['selectedLabels']) ? $_REQUEST['selectedLabels'] : [];
 
 // Start rendering the HTML output
 echo '<div class="flex-table label-checkbox" style="width: 40rem;">
@@ -68,10 +70,10 @@ echo '<div class="flex-cell" style="width: 50%;">
         </div>';
 
 $selectedLabelsCount = 0;
-$selectedLabels = isset($_GET['selectedLabels']) ? $_GET['selectedLabels'] : [];
 foreach ($boardLabels as $label) {
-    $labelId = safeGet($label, 'id', safeGet($label, 'label_id', ''));
-    if (in_array($labelId, $selectedLabels)) {
+    $labelId = safeGet($label, 'id', '');
+    if (!empty($labelId) && in_array(strval($labelId), $selectedLabels)) {
+        $activeLabels[] = strval($labelId);
         renderLabelCheckbox($label, true);
         $selectedLabelsCount++;
     }
@@ -93,14 +95,14 @@ echo '<div class="flex-cell" style="width: 50%;">';
 if ($searchLabelSet) {
     // Search Results
     echo '<div class="flex-row"><div class="flex-cell"><strong>Search Results</strong></div></div>';
-    $searchTerm = $_GET['search-label'];
+    $searchTerm = $_REQUEST['search-label'];
     $searchResults = $board->searchBoardLabels($user->getActiveTaskBoard(), $searchTerm);
 
     if (!empty($searchResults)) {
         $searchCount = 0;
         foreach ($searchResults as $label) {
-            $labelId = safeGet($label, 'id', safeGet($label, 'label_id', ''));
-            if (!in_array($labelId, $selectedLabels)) {
+            $labelId = safeGet($label, 'id', '');
+            if (!empty($labelId) && !in_array(strval($labelId), $activeLabels)) {
                 renderLabelCheckbox($label);
                 $searchCount++;
             }
@@ -117,8 +119,8 @@ if ($searchLabelSet) {
     echo '<div class="flex-row"><div class="flex-cell"><strong>Available Labels</strong></div></div>';
     $availableLabelsCount = 0;
     foreach ($boardLabels as $label) {
-        $labelId = safeGet($label, 'id', safeGet($label, 'label_id', ''));
-        if (!in_array($labelId, $selectedLabels)) {
+        $labelId = safeGet($label, 'id', '');
+        if (!empty($labelId) && !in_array(strval($labelId), $activeLabels)) {
             renderLabelCheckbox($label);
             $availableLabelsCount++;
         }

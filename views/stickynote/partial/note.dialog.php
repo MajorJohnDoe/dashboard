@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                 </div>
                 <div class="flex-row">
                     <div class="flex-cell">
-                        Filer här kanske
+                       
                     </div>
                 </div>
                 <div class="flex-row" style="flex: 1;">

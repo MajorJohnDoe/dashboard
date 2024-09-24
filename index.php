@@ -72,7 +72,7 @@ $router->addPartialRoute('GET',                     '/label/:action',           
 // Core functionality for creating, editing, and organizing tasks
 $router->addPartialRoute(['GET', 'POST'],               '/task/dialog/:action/:column_id',          'taskboard/partial/task/dialog.edit', [$authMiddleware]);                           // new task dialog
 $router->addPartialRoute(['GET', 'POST', 'DELETE'],     '/task/dialog/:action/:column_id/:task_id', 'taskboard/partial/task/dialog.edit', [$authMiddleware]);                           // edit existing task
-$router->addPartialRoute('GET',                         '/task/label/search',                       'taskboard/partial/task/label.search', [$authMiddleware]);                          // search for task labels
+$router->addPartialRoute(['GET', 'POST'],               '/task/label/search',                       'taskboard/partial/task/label.search', [$authMiddleware]);                          // search for task labels
 $router->addPartialRoute(['GET', 'POST'],               '/task/duplicate/:action/:taskid',          'taskboard/partial/task/dialog.edit.duplicate', [$authMiddleware]);                 // Task duplicate button/modal
 $router->addPartialRoute('GET',                         '/task/checklist/:action/:task_id',         'taskboard/partial/task/dialog.edit.checklist', [$authMiddleware]);                 // Task checklist import
 $router->addPartialRoute('POST',                        '/task/move-to-column',                     'Taskboard\TaskController@handleDragAndDropTaskColumns', [$authMiddleware]);        // Drag and drop task endpoint
