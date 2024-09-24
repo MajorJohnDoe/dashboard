@@ -14,31 +14,30 @@ Npm
 
 ### Steps
 
-1. Clone the repository:
-Copygit clone https://github.com/MajorJohnDoe/dashboard.git
-cd dashboard
+**Clone the repository:**
+    - Copygit clone https://github.com/MajorJohnDoe/dashboard.git
+    - cd dashboard
 
-2. Install npm dependencies:
-Copynpm install
+**Install npm dependencies:**
+    - npm install
 
-3. Configure your web server:
+**Configure your web server:**
+    - Ensure that the document root is set to the project's public directory.
+    - Make sure the .htaccess file is present in the root directory and that Apache is configured to allow .htaccess overrides.
 
-Ensure that the document root is set to the project's public directory.
-Make sure the .htaccess file is present in the root directory and that Apache is configured to allow .htaccess overrides.
+**Set up your PHP environment:**
+    - Copy config.example.php to config.php and update the configuration settings as needed.
 
-4. Set up your PHP environment:
-
-Copy config.example.php to config.php and update the configuration settings as needed.
-
-5. (Optional) If using a database, set up your database and update the connection details in config.php. Both MariaDB and MySQL should work.
+(Optional) If using a database, set up your database and update the connection details in config.php. Both MariaDB and MySQL should work.
 
 ## Usage
-Access the dashboard through your web browser by navigating to the configured domain or localhost address.
+Access the dashboard through your web browser by navigating to the configured domain or localhost address. You should be directed to a login page where you can login with username: johndoe and password: password.
+
 Features
 
 - Task management
 - Sticky notes
-- Create notes with voice to text transcribing for easier notes, requires a Open AI API Key
+- Create sticky notes with voice-to-text transcription for easier note-taking. The app requires an OpenAI API key for speech recognition.
 - TinyMCE integration for rich text editing
 - Sortable elements using SortableJS
 
