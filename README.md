@@ -3,11 +3,18 @@
 ![View over a task management board](screenshot_header.jpg)
 
 ## Description
-Dashboard for personal use. Task management and stickynotes, my way of trying out HTMX. We are still lacking some features but the core functionality is mostly finished.
+Dashboard for personal use. Task management and stickynotes. This project serves as my exploration into HTMX, combining practical utility with modern web development techniques.
 
-Version
+Version 1.0.0
+### Key features
 
-1.0.0
+- Task management
+- Sticky notes
+- Create sticky notes with voice-to-text transcription for easier note-taking. The app requires an OpenAI API key for speech recognition.
+- TinyMCE integration for rich text editing
+- Built with HTMX for dynamic content updates
+
+While the core functionality is largely complete, I'm continuously working on expanding features and refining the user experience. This project showcases a personalized approach to productivity tools, tailored to individual workflow preferences.
 
 ## Installation
 ### Prerequisites
@@ -57,14 +64,6 @@ This will create the necessary tables and insert some test data to get you start
 
 ## Usage
 Access the dashboard through your web browser by navigating to the configured domain or localhost address. You should be directed to a login page where you can login with **username: johndoe and password: password**.
-
-Features
-
-- Task management
-- Sticky notes
-- Create sticky notes with voice-to-text transcription for easier note-taking. The app requires an OpenAI API key for speech recognition.
-- TinyMCE integration for rich text editing
-- Sortable elements using SortableJS
 
 ## Dependencies
 
