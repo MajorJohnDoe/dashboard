@@ -22,24 +22,13 @@
         $file_path = str_replace('\\', '/', $relative_class);
         $file_parts = explode('/', $file_path);
         
-        /* if ($file_parts[0] === 'Core') {
-            // Core classes are in the 'core' subdirectory
-            $file = $base_dir . 'core/' . implode('/', array_slice($file_parts, 1)) . '.class.php';
-        } else { */
-            // Other classes are directly in the 'classes' directory
-            $file = $base_dir . $file_path . '.class.php';
-       /*  } */
+        // Other classes are directly in the 'classes' directory
+        $file = $base_dir . $file_path . '.class.php';
     
         // If the file exists, require it
         if (file_exists($file)) {
             require $file;
-        } /* else {
-            // Check if it's an interface in the core directory
-            $interface_file = $base_dir . 'core/interfaces/' . end($file_parts) . '.class.php';
-            if (file_exists($interface_file)) {
-                require $interface_file;
-            }
-        } */
+        } 
     });
     
     // Load function file if it exists
