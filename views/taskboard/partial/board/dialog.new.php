@@ -1,0 +1,60 @@
+<?php
+use Dashboard\Taskboard\BoardController;
+
+$controller = new BoardController($db, $user);
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $result = $controller->handleCreateBoard();
+
+    if ($result['success']) {
+        triggerResponse([
+            "newBoard" => true,
+            "taskBoardColumnList" => true,
+            "closeSpecificModalEvent" => ["dialog-board-new"],
+            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+        ]);
+    } else {
+        triggerResponse([
+            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]
+        ]);
+    }
+}
+?>
+
+<div id="dialog-board-new" class="modal-container">
+    <div class="dialog" style="width: 30rem; max-width: 90%;">
+        <div class="dialog-header">
+            <span>Create New Board</span>
+            <button class="close-modal-btn btn">X</button>
+        </div>
+        <div class="formOuter">
+            <form id="form_createBoard" method="POST" hx-post="/board/dialog/new" hx-target="#dialog-board-new" hx-swap="outerHTML">
+                <div class="nice-form-group" style="padding: 1.5rem;">
+                    <div class="flex-table">
+                        <div class="flex-row">
+                            <div class="flex-cell">
+                                <label for="boardName">Board Name:</label>
+                                <input type="text" 
+                                       name="boardName" 
+                                       id="boardName" 
+                                       autocomplete="off" 
+                                       autofocus 
+                                       placeholder="Enter board name..."
+                                       required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions" style="padding: 0 1.5rem 1.5rem;">
+                    <div class="flex-table">
+                        <div class="flex-row">
+                            <div class="flex-cell flex-right">
+                                <button type="submit" class="btn btn-green">Create Board</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

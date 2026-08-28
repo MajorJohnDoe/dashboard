@@ -34,7 +34,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
         if ($result['success'] == true) {
             triggerResponse([
                 "taskBoardColumnList" => true, 
-                "closeModalEvent" => true, 
+                "closeModalEvent" => ['modalId' => 'dialog-column-add-task'], 
                 "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
             ]);
         } else {
@@ -208,7 +208,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                     <div class="flex-cell">
                                         <span class="form-label">Add to task</span>
                                         <!-- Labels Button -->
-                                        <button class="open-modal-btn btn btn-dark-gray" 
+                                        <button class="btn btn-dark-gray" 
                                                 style="margin: 0.5rem 0 0 0; width: 100%;" 
                                                 hx-get="/label/edit"
                                                 hx-target="body" 

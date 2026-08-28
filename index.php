@@ -29,9 +29,9 @@ $authMiddleware = new AuthMiddleware($user);
 // -------------------------------------------------------------------------
 
 // Full page routes
-$router->addRoute('GET', '/',               'taskboard/page/index',             ['title' => 'Task Dashboard', 'css' => ['layout'], 'js' => [], 'full_page' => true], [$authMiddleware]);
-$router->addRoute('GET', '/board',          'taskboard/page/view_taskboard',    ['title' => 'Task Management Board', 'css' => ['layout', 'task'], 'js' => ['task.board'],'external_js' => ['/node_modules/sortablejs/Sortable.min.js', '/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
-$router->addRoute('GET', '/stickynotes',    'stickynote/page/index',            ['title' => 'Sticky Notes', 'css' => ['layout', 'stickynotes'], 'js' => [], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
+$router->addRoute('GET', '/',               'taskboard/page/index',             ['title' => 'Task Dashboard', 'css' => ['layout'], 'js' => ['notifications'], 'full_page' => true], [$authMiddleware]);
+$router->addRoute('GET', '/board',          'taskboard/page/view_taskboard',    ['title' => 'Task Management Board', 'css' => ['layout', 'task'], 'js' => ['task.board', 'notifications'],'external_js' => ['/node_modules/sortablejs/Sortable.min.js', '/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
+$router->addRoute('GET', '/stickynotes',    'stickynote/page/index',            ['title' => 'Sticky Notes', 'css' => ['layout', 'stickynotes'], 'js' => ['notifications'], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
 
 // Login/logout route (no authentication middleware)
 $router->addRoute(['GET', 'POST'], '/login', 'core/login', ['title' => 'Login', 'full_page' => false]);
@@ -41,7 +41,26 @@ $router->addRoute(['GET', 'POST'], '/logout', 'core/logout', ['title' => 'Login'
 // ****************************************************************
 // Partial routes, Core routes
 // ****************************************************************
-$router->addPartialRoute(['GET', 'POST'], '/account/settings',   'core/partial/modal.profile', [$authMiddleware]);           // create, edit, delete a note dialog
+$router->addPartialRoute(['GET', 'POST'], '/account/settings',   'core/partial/modal.profile', [$authMiddleware]);           // Account settings modal
+
+// Notification routes - using MVC pattern
+$router->addPartialRoute('GET', '/notifications', 'Core/NotificationsController@panel', [$authMiddleware]);
+$router->addPartialRoute('GET', '/notifications/list', 'Core/NotificationsController@list', [$authMiddleware]);
+$router->addPartialRoute('GET', '/notifications/list/:filter', 'Core/NotificationsController@list', [$authMiddleware]);
+$router->addPartialRoute('GET', '/notifications/check', 'Core/NotificationsController@check', [$authMiddleware]);
+$router->addPartialRoute('POST', '/notifications/mark-read', 'Core/NotificationsController@markRead', [$authMiddleware]);
+$router->addPartialRoute('POST', '/notifications/mark-all-read', 'Core/NotificationsController@markAllRead', [$authMiddleware]);
+$router->addPartialRoute('DELETE', '/notifications/delete', 'Core/NotificationsController@delete', [$authMiddleware]);
+$router->addPartialRoute('POST', '/notifications/accept', 'Core/NotificationsController@accept', [$authMiddleware]);
+$router->addPartialRoute('POST', '/notifications/decline', 'Core/NotificationsController@decline', [$authMiddleware]);
+
+// Board sharing routes
+$router->addPartialRoute('GET',           '/board/members',            'taskboard/partial/board/members.list', [$authMiddleware]);      // Board members list
+$router->addPartialRoute(['GET', 'POST'], '/board/share',             'taskboard/partial/board/share.handler', [$authMiddleware]);     // Share board handler
+$router->addPartialRoute(['PUT'],         '/board/share/access',      'taskboard/partial/board/share.handler', [$authMiddleware]);     // Update share access level
+$router->addPartialRoute(['DELETE'],      '/board/share',             'taskboard/partial/board/share.handler', [$authMiddleware]);     // Remove board share
+$router->addPartialRoute(['POST'],        '/board/share/accept',      'taskboard/partial/board/share.handler', [$authMiddleware]);     // Accept board invite
+$router->addPartialRoute(['POST'],        '/board/share/decline',     'taskboard/partial/board/share.handler', [$authMiddleware]);     // Decline board invite
 
 
 // ****************************************************************
@@ -80,6 +99,7 @@ $router->addPartialRoute('POST',                        '/task/move-to-column', 
 // 4. Board Management
 // Functionality for managing task boards, including columns
 $router->addPartialRoute(['GET', 'POST'], '/board/dialog/columns/:action',  'taskboard/partial/board/dialog.edit.columns', [$authMiddleware]);  // Add column in board modal
+$router->addPartialRoute(['GET', 'POST'], '/board/dialog/new',                'taskboard/partial/board/dialog.new', [$authMiddleware]);          // Create new board modal
 $router->addPartialRoute(['GET', 'POST'], '/board/dialog/:action',          'taskboard/partial/board/dialog.edit', [$authMiddleware]);          // Board modal
 $router->addPartialRoute('GET',           '/board/list',                    'taskboard/partial/board/list.boards', [$authMiddleware]);          // List all task boards
 $router->addPartialRoute('POST',          '/board/create',                  'Taskboard\BoardController@createBoard', [$authMiddleware]);        // Create a new board endpoint
@@ -104,18 +124,15 @@ $router->addPartialRoute('GET', '/calendar/dialog/date/:date', 'taskboard/partia
 $method = $_SERVER['REQUEST_METHOD'];
 $path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
-/* error_log("Handling request: $method $path"); */
-
 try {
     $content = $router->handleRequest($_SERVER['REQUEST_METHOD'], $_SERVER['REQUEST_URI']);
     echo $content;
-} catch (Exception $e) {
-    error_log("Error occurred: " . $e->getMessage());
-    error_log("Stack trace: " . $e->getTraceAsString());
-    
+} catch (\Throwable $e) {
+    error_log("Request error: " . $e->getMessage());
+    header('Content-Type: application/json');
     http_response_code(500);
-    echo "An error occurred. Please try again later.";
+    echo json_encode(['error' => $e->getMessage()]);
 }
 
-if (ob_get_length()) ob_end_flush(); // End output buffering if it's not empty
+if (ob_get_length()) ob_end_flush();
 ?>

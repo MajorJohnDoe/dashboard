@@ -9,11 +9,17 @@ class ColumnController {
     private $db;
     private $user;
     private $column;
+    private $board;
 
     public function __construct(DatabaseInterface $db, User $user) {
         $this->db = $db;
         $this->user = $user;
         $this->column = new Column($db);
+        $this->board = new Board($db);
+    }
+
+    public function validateBoardWriteAccess($boardId) {
+        return $this->board->validateBoardWriteAccess($this->user->getUserId(), $boardId);
     }
 
     public function handleCreateColumn($boardId, $columnName, $columnOrder) {
@@ -114,17 +120,26 @@ class ColumnController {
     }
 
     public function getColumnsForBoard($boardId) {
-        if (!$this->verifyBoardOwnership($boardId)) {
-            return ['success' => false, 'error' => 'Board does not belong to the user.'];
+        if (!$this->verifyBoardViewAccess($boardId)) {
+            return ['success' => false, 'error' => 'No access to this board.'];
         }
         $columns = $this->column->getColumnsForBoard($boardId);
         return ['success' => true, 'columns' => $columns];
     }
 
     public function getTasksForColumn($columnId, $taskOrder = null, $displayMaxTasks = 2) {
-        if (!$this->verifyColumnOwnership($columnId)) {
-            return ['success' => false, 'error' => 'Column does not belong to the user.'];
+        // Get the board ID for this column
+        $sql = "SELECT parent_id FROM tm_column WHERE id = ? LIMIT 1";
+        $result = $this->db->q($sql, "i", $columnId);
+        if (!$result) {
+            return ['success' => false, 'error' => 'Column not found'];
         }
+
+        $boardId = $result[0]['parent_id'];
+        if (!$this->verifyBoardViewAccess($boardId)) {
+            return ['success' => false, 'error' => 'No access to this board'];
+        }
+
         $tasks = $this->column->getTasksForColumn($columnId, $taskOrder, $displayMaxTasks);
         return ['success' => true, 'tasks' => $tasks];
     }
@@ -137,9 +152,12 @@ class ColumnController {
         return $result ? ['success' => true, 'message' => 'Column name changed successfully.'] : ['success' => false, 'error' => 'Failed to change column name.'];
     }
 
+    private function verifyBoardViewAccess($boardId) {
+        return $this->board->validateBoardOwnership($this->user->getUserId(), $boardId);
+    }
+
     private function verifyBoardOwnership($boardId) {
-        $board = new Board($this->db);
-        return $board->validateBoardOwnership($this->user->getUserId(), $boardId);
+        return $this->board->validateBoardWriteAccess($this->user->getUserId(), $boardId);
     }
 
     private function verifyColumnOwnership($columnId) {

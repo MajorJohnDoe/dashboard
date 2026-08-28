@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_GET['action'] == 'new') {
 
 // List board columns
 $result = $controller->getColumnsForBoard($activeBoardId);
-$boardColumns = $result['columns'];
+$boardColumns = $result['success'] ? ($result['columns'] ?? []) : [];
 ?>
 
 <form id="form_addColumn" hx-post="<?=htmlspecialchars($postUrl);?>" hx-target="#list-Columns-edit-board" hx-swap="innerHTML">
@@ -42,9 +42,11 @@ $boardColumns = $result['columns'];
             <?php endif; ?>
         </div>
     </div>
+    <?php if ($controller->validateBoardWriteAccess($activeBoardId)): ?>
     <div class="flex-row">
         <div class="flex-cell flex-right">
             <input type="submit" value="Add column" form="form_addColumn" class="btn btn-light-gray" style="margin:0;">
         </div>
     </div>
+    <?php endif; ?>
 </form>

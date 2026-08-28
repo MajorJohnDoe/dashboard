@@ -1,0 +1,44 @@
+.crop-container {
+    background-color: #f5f5f5;
+    margin: 1rem 0;
+    user-select: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.crop-container canvas {
+    cursor: move;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 100%;
+    max-height: 100%;
+    touch-action: none; /* Prevents default touch actions on mobile */
+}
+
+.crop-controls {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding: 1rem 0;
+    background-color: #fff;
+}
+
+/* Add hover effect to the crop area */
+.crop-container:hover canvas {
+    opacity: 0.95;
+}
+
+/* Ensure the preview container doesn't overflow the modal */
+#crop-preview {
+    width: 100%;
+    overflow: hidden;
+    margin-top: 2rem;
+}
+
+/* Style the buttons consistently */
+#crop-preview button {
+    min-width: 80px;
+}

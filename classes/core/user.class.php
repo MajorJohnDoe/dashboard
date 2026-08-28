@@ -127,7 +127,15 @@ class User
     // When user selects a task board, we set the board as active
     public function setActiveTaskBoard(int $boardId): bool
     {
-        $result = $this->db->q("SELECT `id` FROM `tm_board` WHERE `user_id` = ? AND `id` = ? LIMIT 1", "ii", $this->userId, $boardId);
+        // Check if user owns the board or has accepted shared access
+        $sql = "SELECT b.`id` 
+                FROM `tm_board` b 
+                LEFT JOIN `board_shares` bs ON b.`id` = bs.`board_id` AND bs.`user_id` = ?
+                WHERE b.`id` = ? 
+                AND (b.`user_id` = ? OR bs.`status` = 'accepted')
+                LIMIT 1";
+
+        $result = $this->db->q($sql, "iii", $this->userId, $boardId, $this->userId);
 
         if ($result && count($result) > 0) {
             $updateSuccess = $this->db->q("UPDATE `user` SET `active_task_board` = ? WHERE user_id = ? LIMIT 1", "ii", $boardId, $this->userId);

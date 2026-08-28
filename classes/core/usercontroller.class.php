@@ -43,15 +43,15 @@ class UserController
 
     public function updateProfilePhoto($file): array
     {
-        if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
+        if (!isset($file['tmp_name']) || !\is_uploaded_file($file['tmp_name'])) {
             return ['success' => false, 'message' => 'No file uploaded'];
         }
 
         $userId = $this->user->getUserId();
-        $uploadDir = dirname(__DIR__, 2) . "/user_upload/{$userId}/";
+        $uploadDir = \dirname(__DIR__, 2) . "/user_upload/{$userId}/";
         
-        if (!file_exists($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
+        if (!\file_exists($uploadDir)) {
+            if (!\mkdir($uploadDir, 0755, true)) {
                 return ['success' => false, 'message' => 'Failed to create upload directory'];
             }
         }
@@ -59,46 +59,10 @@ class UserController
         $fileName = 'profileimg.jpg';
         $filePath = $uploadDir . $fileName;
 
-        // Create and crop image
-        $sourceImage = imagecreatefromstring(file_get_contents($file['tmp_name']));
-        if ($sourceImage === false) {
-            return ['success' => false, 'message' => 'Failed to create image from uploaded file'];
+        // The image is already cropped client-side, just save it directly
+        if (!\move_uploaded_file($file['tmp_name'], $filePath)) {
+            return ['success' => false, 'message' => 'Failed to save uploaded file'];
         }
-
-        $width = imagesx($sourceImage);
-        $height = imagesy($sourceImage);
-        $size = min($width, $height);
-
-        $croppedImage = imagecreatetruecolor(200, 200);
-        if ($croppedImage === false) {
-            imagedestroy($sourceImage);
-            return ['success' => false, 'message' => 'Failed to create new image'];
-        }
-
-        // Crop and resize
-        if (!imagecopyresampled(
-            $croppedImage, 
-            $sourceImage, 
-            0, 0, 
-            (int)(($width - $size) / 2), 
-            (int)(($height - $size) / 2), 
-            200, 200, 
-            $size, $size
-        )) {
-            imagedestroy($sourceImage);
-            imagedestroy($croppedImage);
-            return ['success' => false, 'message' => 'Failed to crop and resize image'];
-        }
-
-        // Save the cropped image
-        if (!imagejpeg($croppedImage, $filePath, 90)) {
-            imagedestroy($sourceImage);
-            imagedestroy($croppedImage);
-            return ['success' => false, 'message' => 'Failed to save image'];
-        }
-
-        imagedestroy($sourceImage);
-        imagedestroy($croppedImage);
 
         // Update user avatar in the database
         $avatarPath = "/user_upload/{$userId}/profileimg.jpg";
@@ -119,9 +83,9 @@ class UserController
             return ['success' => false, 'message' => 'User not found or no profile photo set'];
         }
 
-        $avatarPath = dirname(__DIR__, 2) . $user[0]['user_avatar'];
-        if (file_exists($avatarPath)) {
-            unlink($avatarPath);
+        $avatarPath = \dirname(__DIR__, 2) . $user[0]['user_avatar'];
+        if (\file_exists($avatarPath)) {
+            \unlink($avatarPath);
         }
 
         $updateResult = $this->db->q("UPDATE `user` SET user_avatar = '' WHERE user_id = ?", 'i', $userId);
@@ -141,6 +105,22 @@ class UserController
         }
 
         return ['success' => true, 'message' => 'API key changed successfully'];
+    }
+
+    public function getUserAvatar(int $userId): string 
+    {
+        if (!$userId) {
+            return '/assets/img/default_profile.jpg';
+        }
+        
+        $sql = "SELECT `user_avatar` FROM `user` WHERE `user_id` = ? LIMIT 1";
+        $result = $this->db->q($sql, 'i', $userId);
+        
+        if ($result && isset($result[0]['user_avatar']) && $result[0]['user_avatar'] !== '') {
+            return $result[0]['user_avatar'];
+        }
+        
+        return '/assets/img/default_profile.jpg';
     }
 }
 

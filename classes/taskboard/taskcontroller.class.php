@@ -312,6 +312,12 @@ class TaskController {
             return $validatedData;
         }
 
+        if (strlen($validatedData['taskTitle']) > 99) {
+            $validatedData['isValid'] = false;
+            $validatedData['error'] = 'Title is too long.';
+            return $validatedData;
+        }
+
         $validatedData['checklistJSON'] = $this->validateChecklist($postData['checklist'] ?? []);
 
         return $validatedData;

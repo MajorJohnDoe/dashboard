@@ -5,10 +5,14 @@ use Dashboard\Taskboard\ColumnController;
 // Initialize the controller
 $controller = new BoardController($db, $user);
 
+// Initialize variables
+$board_result = null;
+$boardId = null;
+$BoardName = '';
+$post_url = '/board/dialog/edit';
+
 // User wants to edit board
 if($_GET['action'] == 'edit') {
-    $post_url = '/board/dialog/edit';
-
     $board_result = $controller->loadBoardDataById($user->getActiveTaskBoard());
     if($board_result) {
         $boardId = $board_result[0]['id'];
@@ -17,17 +21,17 @@ if($_GET['action'] == 'edit') {
 
     $objColumn = new ColumnController($db, $user);
     $BoardColumns = $objColumn->getColumnsForBoard($user->user_id(), $user->getActiveTaskBoard());
-} 
+}
 
 // Handle POST requests
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_GET['action'] ?? '';
 
     switch ($action) {
-        case 'create':
+        /* case 'create':
             $boardName = $_POST['board_title'] ?? '';
             $result = $controller->handleCreateBoard($boardName);
-            break;
+            break; */
         case 'edit':
             $boardId = $user->getActiveTaskBoard();
             $boardTitle = $_POST['board_title'] ?? '';
@@ -89,16 +93,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
                     <div class="left-column">
                         <div class="flex-table">
                             <form   
-                                id="form_editBoard" 
-                                hx-post="<?=$post_url?>" 
-                                hx-target="#dialog-board-settings" 
-                                hx-swap="none">
-                                <div class="flex-row">
-                                    <div class="flex-cell">
-                                        <span class="form-label">Board title:</span>
+                            id="form_editBoard" 
+                            hx-post="<?=$post_url?>" 
+                            hx-target="#dialog-board-settings" 
+                            hx-swap="none">
+                            <div class="flex-row">
+                                <div class="flex-cell">
+                                    <span class="form-label">Board title:</span>
+<?php if ($board_result && isset($board_result[0]['user_id']) && $board_result[0]['user_id'] == $user->getUserId()): ?>
                                         <input type="text" name="board_title" id="board_title" value="<?=(isset($BoardName) ? htmlspecialchars($BoardName):'')?>">
-                                    </div>
+                                    <?php else: ?>
+                                        <div class="form-value"><?=(isset($BoardName) ? htmlspecialchars($BoardName):'')?></div>
+                                    <?php endif; ?>
                                 </div>
+                            </div>
                             </form>
                             <div class="flex-row ">
                                 <div class="flex-cell">
@@ -110,16 +118,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
                                     </div>
                                 </div>
                             </div>
-                                <!--  
-                                <div class="flex-row ">
-                                    <div class="flex-cell">
-                                        <span class="form-label">Board users:</span>
-                                        <div class="board-members-container">
-                                            <div class="board-members">You</div><div class="board-members">Lina</div>
-                                        </div>
+<?php if ($board_result && isset($board_result[0]['user_id']) && $board_result[0]['user_id'] == $user->getUserId()): ?>
+                            <div class="flex-row">
+                                <div class="flex-cell"><span class="form-label">Share board:</span></div>
+                            </div>
+                            <div class="flex-row nice-form-group">
+                                <div class="flex-cell ">
+                                    <input type="email" name="share_email" id="share_email" placeholder="Enter user email">
+                                </div>
+                                <div class="flex-cell flex-cell-shrink">
+                                    <select name="access_level" id="share_access_level">
+                                        <option value="read">Read access</option>
+                                        <option value="write">Write access</option>
+                                    </select>
+                                </div>
+                                <div class="flex-cell flex-cell-shrink">
+                                    <button type="button" class="btn btn-light-gray" 
+                                            hx-post="/board/share" 
+                                            hx-include="#share_email,#share_access_level"
+                                            hx-swap="none">
+                                        Share
+                                    </button>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            <div class="flex-row">
+                                <div class="flex-cell">
+                                    <span class="form-label">Board members:</span>
+                                    <div id="board-members-list"
+                                            hx-get="/board/members" 
+                                            hx-trigger="load, boardMembersUpdate from:body"
+                                            hx-target="this">
                                     </div>
-                                </div> 
-                                -->
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <!-- Right Column -->
@@ -128,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
                             <div class="flex-row">
                                 <span class="form-label">Attributes</span>
                             </div>
+<?php if ($board_result && isset($board_result[0]['user_id']) && $board_result[0]['user_id'] == $user->getUserId()): ?>
                             <div class="flex-row">
                                 <div class="flex-cell">
                                     <button class="open-modal-btn btn btn-blue" 
@@ -138,13 +171,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
                                     </button>
                                 </div>
                             </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <!-- Actions -->
                     <div class="form-actions">
                         <div class="flex-table">
                             <div class="flex-row">
-                            <div class="flex-cell flex-vertical-center">                        
+                            <?php if ($board_result && isset($board_result[0]['user_id']) && $board_result[0]['user_id'] == $user->getUserId()): ?>
+                                <div class="flex-cell flex-vertical-center">                        
                                     <input 
                                         type="button" 
                                         value="Delete board" 
@@ -157,6 +192,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
                                 <div class="flex-cell flex-vertical-center flex-right">                        
                                     <input type="submit" value="Update board" form="form_editBoard" class="btn btn-green">
                                 </div>
+                            <?php endif; ?>
                             </div>
                         </div>
                     </div>

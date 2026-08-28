@@ -22,13 +22,25 @@
         $file_path = str_replace('\\', '/', $relative_class);
         $file_parts = explode('/', $file_path);
         
-        // Other classes are directly in the 'classes' directory
-        $file = $base_dir . $file_path . '.class.php';
-    
-        // If the file exists, require it
-        if (file_exists($file)) {
-            require $file;
+        // Handle nested directories (e.g., Core/Notifications/Handlers/)
+        $file = $base_dir . $file_path;
+        
+        // Try with .class.php suffix first
+        if (file_exists($file . '.class.php')) {
+            require $file . '.class.php';
         } 
+        // Try with .php suffix
+        elseif (file_exists($file . '.php')) {
+            require $file . '.php';
+        }
+        // Try as directory with /class.php
+        elseif (file_exists($file . '/class.php')) {
+            require $file . '/class.php';
+        }
+        // Try as directory with index.php
+        elseif (file_exists($file . '/index.php')) {
+            require $file . '/index.php';
+        }
     });
     
     // Load function file if it exists

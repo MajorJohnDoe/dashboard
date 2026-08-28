@@ -23,12 +23,13 @@ class Task {
     public function loadTaskDetails($taskId, $userId) {
         $sql = "SELECT task.* 
                 FROM `tm_task` task
-                    JOIN `tm_board` board ON task.`board_id` = board.`id`
+                JOIN `tm_board` board ON task.`board_id` = board.`id`
+                LEFT JOIN `board_shares` bs ON board.`id` = bs.`board_id` AND bs.`user_id` = ?
                 WHERE 
                     task.task_id = ? AND
-                    board.user_id = ?
+                    (board.user_id = ? OR bs.`status` = 'accepted')
                 LIMIT 1";
-        $result = $this->db->q($sql, "ii", $taskId, $userId);
+        $result = $this->db->q($sql, "iii", $userId, $taskId, $userId);
 
         if ($result) {
             $this->setTaskProperties($result[0]);
@@ -187,8 +188,14 @@ class Task {
 
     // Validation methods
     public function validateTaskOwnership($userId, $taskId) {
-        $sql = "SELECT task.task_id FROM `tm_task` task JOIN `tm_board` board ON task.`board_id` = board.`id` WHERE task.task_id = ? AND board.user_id = ? LIMIT 1";
-        $result = $this->db->q($sql, "ii", $taskId, $userId);
+        $sql = "SELECT task.task_id 
+                FROM `tm_task` task 
+                JOIN `tm_board` board ON task.`board_id` = board.`id` 
+                LEFT JOIN `board_shares` bs ON board.`id` = bs.`board_id` AND bs.`user_id` = ?
+                WHERE task.task_id = ? 
+                AND (board.user_id = ? OR bs.`status` = 'accepted')
+                LIMIT 1";
+        $result = $this->db->q($sql, "iii", $userId, $taskId, $userId);
         return $result !== false && count($result) > 0;
     }
 

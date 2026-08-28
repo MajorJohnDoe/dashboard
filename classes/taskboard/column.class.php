@@ -105,7 +105,12 @@ class Column {
         $displayMaxTasks = isset($arrDisplayTaskLimit[$displayMaxTasks]) ? $arrDisplayTaskLimit[$displayMaxTasks] : $arrDisplayTaskLimit[2];
         $limitClause = $displayMaxTasks ? "LIMIT $displayMaxTasks" : '';
 
-        $sql = "SELECT * FROM `tm_task` WHERE `column_id` = ? {$orderby} {$limitClause}";
+        $sql = "SELECT t.* 
+                FROM `tm_task` t 
+                JOIN `tm_column` c ON t.`column_id` = c.`id` 
+                JOIN `tm_board` b ON c.`parent_id` = b.`id` 
+                WHERE t.`column_id` = ? 
+                {$orderby} {$limitClause}";
         $results = $this->db->q($sql, "i", $columnId);
         return $results !== false ? $results : [];
     }
@@ -117,8 +122,14 @@ class Column {
     }
 
     public function verifyOwnership($columnId, $userId) {
-        $sql = "SELECT a.* FROM `tm_column` a JOIN `tm_board` b ON a.`parent_id` = b.`id` WHERE a.`id` = ? AND b.`user_id` = ? LIMIT 1";
-        $result = $this->db->q($sql, "ii", $columnId, $userId);
+        $sql = "SELECT a.* 
+                FROM `tm_column` a 
+                JOIN `tm_board` b ON a.`parent_id` = b.`id` 
+                LEFT JOIN `board_shares` bs ON b.`id` = bs.`board_id` AND bs.`user_id` = ?
+                WHERE a.`id` = ? 
+                AND (b.`user_id` = ? OR bs.`status` = 'accepted')
+                LIMIT 1";
+        $result = $this->db->q($sql, "iii", $userId, $columnId, $userId);
         return $result !== false && count($result) > 0;
     }
 

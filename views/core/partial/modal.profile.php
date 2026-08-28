@@ -23,7 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             } else {
                 $result = ['success' => false, 'message' => 'No file uploaded or upload error occurred'];
             }
-            break;
+            // Photo upload is done via fetch API, return JSON
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            exit;
         case 'delete_photo':
             $result = $userController->deleteProfilePhoto();
             break;
@@ -40,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $userPhotoPath = $user->getProfilePhotoPath();
 ?>
 
+<link rel="stylesheet" href="/assets/css/image_cropper.css">
 <div id="modal-profile-settings" 
     class="modal-container" 
     hx-get="/account/settings" 
@@ -58,21 +62,76 @@ $userPhotoPath = $user->getProfilePhotoPath();
             <div class="flex-table nice-form-group">
 
                 <!-- Profile Photo Section -->
-                <form id="form_profile_photo" method="POST" enctype="multipart/form-data" hx-post="/account/settings" hx-encoding="multipart/form-data" hx-target="#modal-profile-settings .formOuter" hx-swap="beforeend">
-                    <div id="profile-photo-section">
-                        <div class="flex-row">
-                            <div class="flex-cell flex-cell-vcenter flex-cell-shrink">
-                                <img src="<?= $userPhotoPath ?>" alt="Profile Photo" style="width: 10rem; height: 10rem; object-fit: cover; border-radius: 50%;">
-                            </div>
-                            <div class="flex-cell flex-cell-vcenter">
-                                <input type="file" name="profile_photo" id="profile_photo" accept="image/*" style="display: none;" hx-trigger="change" hx-post="/account/settings" hx-encoding="multipart/form-data" hx-target="#modal-profile-settings .formOuter" hx-swap="beforeend">
-                                <input type="hidden" name="action" value="update_photo">
-                                <button type="button" class="btn btn-green" onclick="document.getElementById('profile_photo').click();" style="margin-top: 1rem;">Change picture</button><br>
-                                <button type="button" class="btn btn-dark-gray btn-hover-red" hx-post="/account/settings" hx-vals='{"action": "delete_photo"}' style="margin-top: 1rem;">Delete picture</button>
-                            </div>
+                <div id="profile-photo-section">
+                    <div class="flex-row">
+                        <div class="flex-cell flex-cell-vcenter flex-cell-shrink">
+                            <img src="<?= $userPhotoPath ?>?t=<?=time()?>" alt="Profile Photo" style="width: 10rem; height: 10rem; object-fit: cover; border-radius: 50%;">
+                        </div>
+                        <div class="flex-cell flex-cell-vcenter">
+                            <input type="file" id="profile-photo-input" accept=".jpg,.jpeg" style="display: none;">
+                            <button type="button" 
+                                    id="change-picture-btn"
+                                    class="btn btn-green" 
+                                    style="margin-top: 1rem;">
+                                Change picture
+                            </button><br>
+                            <button type="button" class="btn btn-dark-gray btn-hover-red" hx-post="/account/settings" hx-vals='{"action": "delete_photo"}' style="margin-top: 1rem;">Delete picture</button>
                         </div>
                     </div>
-                </form>
+                </div>
+
+                <script>
+                    (function() {
+                        // Get elements
+                        var changeBtn = document.getElementById('change-picture-btn');
+                        var fileInput = document.getElementById('profile-photo-input');
+                        
+                        if (changeBtn && fileInput) {
+                            // Click button to open file picker
+                            changeBtn.addEventListener('click', function() {
+                                fileInput.click();
+                            });
+                            
+                            // When file is selected, open cropper modal
+                            fileInput.addEventListener('change', function(evt) {
+                                if (!evt.target.files || evt.target.files.length === 0) {
+                                    return; // No file selected
+                                }
+                                
+                                var file = evt.target.files[0];
+                                
+                                // Create cropper modal dynamically
+                                var modalHtml = `
+                                    <div id="modal-image-cropper" class="modal-container" style="display: flex;">
+                                        <div class="dialog" style="width: 50rem; max-height: 80vh;">
+                                            <div class="dialog-header">
+                                                <span>Crop Profile Photo</span>
+                                                <button class="close-modal-btn btn">X</button>
+                                            </div>
+                                            <div class="formOuter" style="padding: 1rem;">
+                                                <div id="crop-preview"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `;
+                                
+                                // Add modal to body
+                                var tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = modalHtml;
+                                document.body.appendChild(tempDiv.firstElementChild);
+                                
+                                // Initialize cropper
+                                if (window._imageCropper) {
+                                    delete window._imageCropper;
+                                }
+                                window._imageCropper = new ImageCropperFromFile(file, 'crop-preview');
+                                
+                                // Clear input so we can select the same file again
+                                fileInput.value = '';
+                            });
+                        }
+                    })();
+                </script>
                 
                 <!-- Password Change Section -->
                 <form id="form_change_password" hx-post="/account/settings" hx-target="#modal-profile-settings .formOuter" hx-swap="beforeend">

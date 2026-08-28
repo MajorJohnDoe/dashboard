@@ -1,3 +1,13 @@
+:root {
+    --column-gap: 0.7%;
+    --column-padding: 0.7rem;
+    --task-min-height: 4rem;
+    --task-padding: 0.6rem;
+    --task-font-size: 100%;
+    --column-header-font-size: 100%;
+    --checklist-max-height: calc(100vh - 46rem);
+}
+
 #taskboard-container {
     height: 100%;
     width: 100%;
@@ -5,20 +15,18 @@
 
 #taskboard-container .columns-container {
     display: grid;
-    /* grid-template-columns: repeat(3, 1fr);  *//* 6 columns to accommodate each grid_item */
     grid-template-columns: repeat(auto-fit, minmax(0px, 1fr));
-    grid-gap: 0.7%;
+    grid-gap: var(--column-gap);
     height: 100%;
     width: 100%;
-    /* padding: 0.5rem; */
 }
 
-#taskboard-container .columns-container .task-column { /* need this to stretch height */
+#taskboard-container .columns-container .task-column {
     display: flex;
     flex-direction: column;
-    height: 100%; /* This ensures the column takes the full height of its container */
+    height: 100%;
     box-sizing: border-box;
-    overflow: hidden; /* Prevents the column itself from scrolling */
+    overflow: hidden;
 }
 
 #taskboard-container ul {
@@ -27,18 +35,14 @@
     border-top-left-radius: 0.5rem;
     border-bottom-right-radius: 0.5rem;
     border-bottom-left-radius: 0.5rem;
-    /* display: flex; */
-/*     flex-direction: column;
-    justify-content: stretch;
-    align-items: stretch; */
-    padding: 0.7rem;
+    padding: var(--column-padding);
     height: 100%;
 }
 
 #taskboard-container .column-header {
     display: flex;
     flex-wrap: nowrap;
-    font-size: 110%;
+    font-size: var(--column-header-font-size);
 }
 
 #taskboard-container .column-name {
@@ -88,18 +92,9 @@
     scrollbar-color: rgb(59 82 103) #232d35; 
 }
 
-
 #taskboard-container .sortable-item { cursor: grab; }
 #taskboard-container .move-column-temp-bg .sortable-list{ background-color: #466157 !important; }
-#taskboard-container .move-task-temp-bg { background-color: #26493e;  }
-
-/*     #task-column-container ul li:nth-child(1) {
-    background: red;
-}
-
-#task-column-container ul li:nth-child(2) {
-    background: green;
-} */
+#taskboard-container .move-task-temp-bg { background-color: #26493e; }
 
 #taskboard-container ul > .widget:not(:last-child) {
     margin-bottom: 1rem;
@@ -107,16 +102,22 @@
 
 .tm-task { 
     background: #2c3842;
-    /* border: 0.2rem solid #2e435d; */
     color: #e5edf8;
     position: relative;
     border-left: 0.4rem solid #aacf9c;
     border-radius: 0.3rem;
-    min-height: 4rem;
+    min-height: var(--task-min-height);
     margin-bottom: 0.5rem;
     display: flex;
     align-items: center;
-    padding: 0.6rem 0.6rem 0.6rem 0.6rem;
+    padding: var(--task-padding);
+}
+
+.tm-task .title { 
+    font-weight:400; 
+    line-height: 1.5rem;
+    font-size: var(--task-font-size);
+    word-break: break-word;
 }
 
 .tm-card-lcolor {
@@ -137,12 +138,12 @@
 .tm-task .title { 
     font-weight:400; 
     line-height: 1.5rem;
-    font-size: 100%;
+    font-size: var(--task-font-size);
     word-break: break-word;
 }
 .tm-task .labels { color: #ccc; margin-top: 0.3rem;}
 .tm-task .labels div { 
-    font-size: 93%; 
+    font-size: calc(var(--task-font-size) * 0.9); 
     display:inline-block;
     border-radius: 0.2rem;
     color: #000;
@@ -162,9 +163,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
-/*        position: absolute;
-    top: 0.5rem;
-    right:0.5rem;    */
 }
 
 .tm-task .perc100 { color: #45b475; }
@@ -173,13 +171,11 @@
 .tm-task .perc30 { color: #99854e; }
 .tm-task .perc10 { color: #994e4e; }
 
-
 .task-edit-grid {
     display: grid;
     grid-template-columns: 4fr 1fr; 
     gap: 1px;
     background-color: #efeff7;
-    /* overflow: auto;  */
     max-height: calc(100vh - 30px); 
 }
 
@@ -201,17 +197,17 @@
 
 #checklist-container {
     display: flex;
-    flex-direction: column; /* Ensures elements stack vertically */
-    max-height: calc(100vh - 46rem); /* Adjust this value based on your header, footer, etc. */
-    overflow: auto; /* Adds scroll to the checklist if it exceeds max-height */
+    flex-direction: column;
+    max-height: var(--checklist-max-height);
+    overflow: auto;
 }
 
 .task-checklist-container .flex-row:nth-child(odd) {
-    background-color: #f9f9f9; /* Light gray for odd rows */
+    background-color: #f9f9f9;
 }
 
 .task-checklist-container .flex-row:nth-child(even) {
-    background-color: #e9ecef; /* Slightly darker gray for even rows */
+    background-color: #e9ecef;
 }
 
 .task-checklist-container .flex-row:hover {
@@ -222,22 +218,20 @@
     padding: 0.1rem;
 }
 
-.task-checklist-container  input[type="text"] {
+.task-checklist-container input[type="text"] {
     width: 100%;
-    /* padding: 8px 12px;
-    border: 1px solid #ccc; */
     border: none;
     border-radius: 4px;
     box-sizing: border-box;
     background: transparent;
-    transition: border-color 0.3s ease-in-out; /* Smooth transition for styling changes */
+    transition: border-color 0.3s ease-in-out;
 }
 
 .task-checklist-container input[type="text"]:focus {
-    border-color: #0f5aaa; /* Highlight the border to indicate focus */
-    outline: none; /* Remove default focus outline */
+    border-color: #0f5aaa;
+    outline: none;
     background: #f9fafb;
-    box-shadow: 0 0 0 2px rgba(0,123,255,0.25); /* Add a soft glow to emphasize focus */
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
 #form_addTask #search-label {
@@ -283,7 +277,7 @@
 
 /* Column list in edit board dialog */
 .edit-board-column-list .flex-row .flex-cell { 
-    background-color: rgb(45 116 173 / 25%);;
+    background-color: rgb(45 116 173 / 25%);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -293,23 +287,67 @@
     color: rgb(67 88 105);
 }
 
-.board-members-container {
-    display: flex;
-    flex-direction: row;
-    gap: 0.5rem; 
+/* Board sharing styles */
+.board-sharing-form {
+    margin: 15px 0;
 }
 
-.board-members {
-    background: #ccc; 
-    width: 3rem;
-    height: 3rem;
-    border-radius: 50%;
-    display: flex;
-    align-items: center; 
-    justify-content: center; 
+.form-input {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
 }
 
+.form-input-grow {
+    flex: 2;
+}
 
+.form-select {
+    flex: 1;
+}
+
+.card {
+    padding: 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background: #f8f9fa;
+}
+
+.card-spaced {
+    margin-bottom: 8px;
+}
+
+.text-bold {
+    font-weight: 600;
+}
+
+.text-muted {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.badge {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.badge-read {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.badge-write {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-pending {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+/* Task priority styles */
 .task-priority-container .task-priority-input { 
     display: none; 
 }
@@ -428,8 +466,6 @@
     padding: 0.5rem 1rem;
 }
 
-
-
 /* History calendar for task board */
 .calendar-navigation {
     display: flex;
@@ -514,4 +550,100 @@
     max-width: 3rem;
     background: rgb(241,243,244) !important;
     color: rgb(60, 64, 67);
+}
+
+/* Board member styles */
+.board-members {
+    display: flex;
+    align-items: center;
+    margin-top: 0.75rem;
+}
+
+.board-member-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    margin-left: -8px;
+    transition: transform 0.2s ease;
+}
+
+.board-member-avatar:first-child {
+    margin-left: 0;
+}
+
+.board-member-avatar:hover {
+    transform: scale(1.1);
+    z-index: 10;
+}
+
+.board-member-avatar.owner {
+    border-color: #3896c9;
+}
+
+.board-member-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e5e7eb;
+    color: #6b7280;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-left: -8px;
+}
+
+/* Board sharing styles */
+.member-access {
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.member-access.read {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.member-access.write {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.member-status.pending {
+    background: #fff3e0;
+    color: #f57c00;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+@media (max-width: 2000px) {
+    :root {
+        --column-gap: 0.65%;
+        --column-padding: 0.65rem;
+        --task-min-height: 3.6rem;
+        --task-padding: 0.55rem;
+        --task-font-size: 100%;
+        --column-header-font-size: 95%;
+        --checklist-max-height: calc(100vh - 42rem);
+    }
+    
+    #taskboard-container .column-icons .icon {
+        font-size: 12px;
+        padding: 2px 4px;
+    }
+    
+    #taskboard-container .column-icons .add-task {
+        font-size: 14px;
+        padding: 0 8px;
+    }
+    
+    .tm-task .labels div {
+        font-size: 85%;
+        padding: 0.1rem 0.4rem;
+    }
 }

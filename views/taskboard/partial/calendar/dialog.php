@@ -17,7 +17,8 @@ function getDateInfo($inputDate = null) {
         'nextWeek' => $nextWeek,
         'isNextWeekFuture' => $nextWeek > new \DateTime(),
         'weekNumber' => $currentDate->format('W'),
-        'year' => $currentDate->format('Y')
+        // CHANGE THIS LINE: use 'o' instead of 'Y'
+        'year' => $currentDate->format('o') 
     ];
 }
 

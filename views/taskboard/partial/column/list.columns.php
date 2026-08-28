@@ -21,8 +21,9 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
         echo '  <div id="column-' . $column['id'] . '" class="task-column">';
         echo '      <div class="column-header">';
         echo '          <div class="column-name">' . htmlspecialchars(html_entity_decode($column['column_name'])) . '</div>';
-        echo '          <div class="column-icons">
-                            <div 
+        echo '          <div class="column-icons">';
+        if ($columnController->validateBoardWriteAccess($user->getActiveTaskBoard())) {
+            echo '              <div 
                                 class="icon open-modal-btn" 
                                 id="column-settings-id-' . $column['id'] . '"
                                 title="Column settings" 
@@ -37,8 +38,9 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
                                 data-modal-target="#dialog-column-add-task"
                                 hx-get="/task/dialog/new/' . $column['id'] . '" 
                                 hx-target="body" 
-                                hx-swap="beforeend">+</div>
-                        </div>';
+                                hx-swap="beforeend">+</div>';
+        }
+        echo '          </div>';
         echo '      </div>';
         echo '  <ul id="inner-column-' . $column['id'] . '" class="sortable-list">';
 
@@ -96,6 +98,10 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
     echo '</div>';
 } 
 else {
-    echo '<div class="no-columns-message">No columns found, click on "edit board" to add new columns.</div>';
+    if ($columnController->validateBoardWriteAccess($user->getActiveTaskBoard())) {
+        echo '<div class="no-columns-message">No columns found, click on "edit board" to add new columns.</div>';
+    } else {
+        echo '<div class="no-columns-message">This board has no columns yet.</div>';
+    }
 }
 ?>

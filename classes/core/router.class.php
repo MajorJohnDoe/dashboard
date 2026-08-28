@@ -74,8 +74,6 @@ class Router {
      * @return string|null The response content
      */
     public function handleRequest($method, $path) {
-        error_log("Handling request: $method $path");
-
         foreach ($this->routes as $route) {
             if ($this->isMethodMatch($route['method'], $method)) {
                 $params = $this->matchPath($route['path'], $path);
@@ -126,20 +124,44 @@ class Router {
      * Handle a controller-based route
      */
     private function handleControllerRoute($handler) {
-        list($controllerName, $methodName) = explode('@', $handler);
-        $controllerClass = "Dashboard\\" . $controllerName;
-        
-        if (!class_exists($controllerClass)) {
-            throw new Exception("Controller class $controllerClass not found");
+        try {
+            list($controllerName, $methodName) = explode('@', $handler);
+            // Convert forward slashes to backslashes for namespace
+            $controllerClass = "Dashboard\\" . str_replace('/', '\\', $controllerName);
+            
+            if (!class_exists($controllerClass)) {
+                throw new Exception("Controller class $controllerClass not found");
+            }
+            
+            $controller = new $controllerClass($this->db, $this->user, $this->view);
+            $result = $controller->$methodName();
+            
+            // Check if controller returned a view response
+            if (is_array($result) && isset($result['view'])) {
+                // Render view with data
+                $viewData = [
+                    'db' => $this->db,
+                    'user' => $this->user,
+                    'session' => $this->session,
+                    'options' => ['full_page' => false]
+                ];
+                // Merge controller data into viewData
+                if (isset($result['data'])) {
+                    $viewData = array_merge($viewData, $result['data']);
+                }
+                return $this->view->render($result['view'], $viewData);
+            }
+            
+            // Default: JSON response for existing controllers
+            header('Content-Type: application/json');
+            echo json_encode($result);
+            return;
+        } catch (\Throwable $e) {
+            error_log("Controller error: " . $e->getMessage());
+            header('Content-Type: application/json');
+            http_response_code(500);
+            echo json_encode(['error' => $e->getMessage()]);
         }
-        
-        $controller = new $controllerClass($this->db, $this->user);
-        $result = $controller->$methodName();
-        
-        // Ensure proper JSON response
-        header('Content-Type: application/json');
-        echo json_encode($result);
-        return;
     }
 
     /**
@@ -149,7 +171,7 @@ class Router {
         $viewData = [
             'db' => $this->db,
             'user' => $this->user,
-            'session' => $this->session, // Add this line
+            'session' => $this->session,
             'options' => $route['options']
         ];
         return $this->view->render($route['handler'], $viewData);
@@ -186,7 +208,6 @@ class Router {
      * @return array|false An array of path parameters if matched, false otherwise
      */
     private function matchPath($routePath, $requestPath) {
-        error_log("Matching route: $routePath against request: $requestPath");
         $routeParts = explode('/', trim($routePath, '/'));
         $requestParts = explode('/', trim(strtok($requestPath, '?'), '/'));
     
@@ -217,19 +238,15 @@ class Router {
      */
     private function loadView($viewPath, $params = []) {
         $fullPath = $_SERVER['DOCUMENT_ROOT'] . '/views/' . $viewPath . '.php';
-        error_log("Attempting to load view: $fullPath");
         if (file_exists($fullPath)) {
             $db = $this->db;
             $user = $this->user;
             $_GET = array_merge($_GET, $params);
-            error_log("View file found, including it now");
             ob_start();
             require $fullPath;
             $content = ob_get_clean();
-            error_log("View content length: " . strlen($content));
             return $content;
         } else {
-            error_log("View file not found: $fullPath");
             throw new Exception("View file not found: $fullPath");
         }
     }

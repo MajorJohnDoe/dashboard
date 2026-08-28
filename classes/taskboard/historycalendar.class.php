@@ -22,8 +22,9 @@ class HistoryCalendar {
 
     private function generateWeek() {
         $html = '';
-        $weekStart = clone $this->currentDate;
-        $weekStart->modify('monday this week');
+        $weekStart = new \DateTime();
+        // Use the ISO year ('o') and Week ('W') to find the Monday (1)
+        $weekStart->setISODate($this->currentDate->format('o'), $this->currentDate->format('W'), 1);
         $weekEnd = clone $weekStart;
         $weekEnd->modify('+6 days');
     
@@ -97,13 +98,13 @@ class HistoryCalendar {
     }
 
     public function getDatesForWeekNumber($weekNumber, $year = null) {
-        // If year is not provided, use the current year
         if ($year === null) {
-            $year = date('Y');
+            // Use 'o' so that Dec 30, 2025 correctly returns 2026
+            $year = $this->currentDate->format('o'); 
         }
 
-        // Create a DateTime object for the first day of the year
         $date = new \DateTime();
+        // setISODate expects (ISO Year, Week, Day)
         $date->setISODate($year, $weekNumber);
 
         $weekDates = [];
