@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= \Dashboard\Core\CsrfProtection::getToken() ?>">
     <title><?= $options['title'] ?? 'Hyperboard' ?></title>
     <?php foreach ($options['css'] ?? [] as $css): ?>
         <link type="text/css" href="/assets/css/<?= $css ?>.css?id=<?=time()?>" rel="stylesheet">
@@ -26,6 +27,7 @@
         <ul>
             <li><a href="/"><img src="/assets/img/icon_tasks.png">Tasks</a></li>
             <li><a href="/stickynotes"><img src="/assets/img/icon_sticky_notes.png">Notes</a></li>
+            <li><a href="/jobs"><img src="/assets/img/icon_jobs.svg">Jobs</a></li>
         </ul>
     </aside>
 

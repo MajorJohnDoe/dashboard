@@ -1,0 +1,405 @@
+/* Jobs Section Stylesheet - Feature Specific Rules */
+
+main.jobs-main {
+    background: #5a6875 !important;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Main layout container */
+.jobs-container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem 1.5rem;
+    overflow-y: auto;
+    box-sizing: border-box;
+    color: #e5edf8;
+}
+
+/* Header & Stats */
+.jobs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.8rem;
+}
+
+.jobs-title-group h1 {
+    font-size: 1.45rem;
+    margin: 0 0 0.35rem 0;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.jobs-stats-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #d1dfed;
+}
+
+.jobs-stats-summary .stat-badge {
+    background: #465561;
+    border: 0.1rem solid #414b55;
+    padding: 0.15rem 0.55rem;
+    border-radius: 0.3rem;
+    color: #e5edf8;
+}
+
+.jobs-stats-summary .stat-badge.active {
+    background: #2c3842;
+    border-color: #3896c9;
+    color: #79c5ef;
+}
+
+.jobs-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+/* Row Checkbox */
+.job-checkbox {
+    cursor: pointer;
+    accent-color: #3896c9;
+    width: 15px;
+    height: 15px;
+}
+
+/* Company Cell */
+.company-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.company-logo-badge {
+    width: 28px;
+    height: 28px;
+    border-radius: 0.3rem;
+    background: #242e37;
+    border: 0.1rem solid #414b55;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    color: #79c5ef;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+}
+
+.company-name {
+    font-weight: 500;
+    color: #ffffff;
+}
+
+.company-link {
+    color: #ffffff;
+}
+.company-link:hover {
+    color: #79c5ef;
+    text-decoration: underline;
+}
+
+/* Position Title Cell */
+.position-title {
+    font-weight: 400;
+    color: #e5edf8;
+}
+
+.position-sub {
+    font-size: 0.74rem;
+    color: #8da4be;
+    margin-top: 0.15rem;
+}
+
+/* Status Pills (100% width of the Status column in table - Task Priority Palette) */
+.status-pill {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+    border-radius: 0.2rem;
+    font-size: 90%;
+    font-weight: 600;
+    padding: 0.2rem 0.5rem;
+    text-transform: capitalize;
+}
+
+.status-wishlist {
+    background: #d4d8df;
+    color: #374151;
+}
+
+.status-applied {
+    background: #9ccccf;
+    color: #076c73;
+}
+
+.status-interviewing {
+    background: #cfb49c;
+    color: #755700;
+}
+
+.status-offer {
+    background: #aacf9c;
+    color: #247d02;
+}
+
+.status-rejected {
+    background: #cf9c9c;
+    color: #890000;
+}
+
+.status-archived {
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+/* Interest Pills in Table - Task Priority Palette */
+.interest-pill {
+    display: inline-block;
+    border-radius: 0.25rem;
+    font-size: 90%;
+    font-weight: 600;
+    padding: 0.2rem 0.55rem;
+    text-transform: capitalize;
+}
+
+.interest-excited,
+.interest-dream {
+    background: #aacf9c;
+    color: #247d02;
+}
+
+.interest-interested {
+    background: #9ccccf;
+    color: #076c73;
+}
+
+.interest-meh {
+    background: #cecf9c;
+    color: #656700;
+}
+
+/* Source Tag */
+.source-tag {
+    color: #cad8e6;
+}
+
+/* Time & Stale Badge */
+.time-badge {
+    color: #8da4be;
+    font-size: 0.78rem;
+}
+
+.time-badge.stale {
+    color: #f6c07d;
+    font-weight: 600;
+}
+
+/* ==========================================================================
+   Job Modal 2-Column Split Grid (Matching Task Modal Design)
+   ========================================================================== */
+.job-edit-grid {
+    display: grid;
+    grid-template-columns: 4fr 1fr;
+    gap: 1px;
+    background-color: #efeff7;
+    max-height: calc(100vh - 30px);
+}
+
+.job-edit-grid .left-column,
+.job-edit-grid .right-column,
+.job-edit-grid .form-actions {
+    background-color: white;
+    padding: 0.5rem;
+    box-sizing: border-box;
+}
+
+.job-edit-grid .left-column {
+    display: flex;
+    flex-direction: column;
+}
+
+.job-edit-grid .left-column > .flex-table {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.job-edit-grid .left-column > .flex-table > .flex-row:last-child {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.job-edit-grid .left-column > .flex-table > .flex-row:last-child > .flex-cell {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.job-edit-grid .right-column {
+    width: auto;
+    background-color: #f5f5f5;
+}
+
+.job-edit-grid .form-actions {
+    grid-column: 1 / span 2;
+}
+
+.job-edit-grid .form-sidebar-section {
+    margin-bottom: 0.5rem;
+}
+
+.job-edit-grid .form-sidebar-section .form-label {
+    display: block;
+    margin-bottom: 0.2rem;
+    color: var(--font-color);
+    font-weight: 600;
+}
+
+/* Make TinyMCE expand to full remaining height and match borders */
+.job-edit-grid .tox.tox-tinymce {
+    height: 100% !important;
+    min-height: 380px !important;
+    width: 100% !important;
+    border: 1px solid #b8b8b8 !important;
+    box-sizing: border-box;
+}
+
+/* Custom Status Selector (2-Column Grid matching Task Priority Palette) */
+.job-status-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.25rem;
+}
+
+.job-status-container .job-status-input {
+    display: none;
+}
+
+.job-status-container .job-status-label {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    text-align: center;
+    padding: 0.45rem 0.2rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+    position: relative;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.8rem;
+    line-height: 1.2;
+}
+
+/* Palette mapping from Task modal Priority */
+.job-status-container .status-btn-wishlist {
+    background: #d4d8df;
+    color: #374151;
+}
+
+.job-status-container .status-btn-applied {
+    background: #9ccccf;
+    color: #076c73;
+}
+
+.job-status-container .status-btn-interviewing {
+    background: #cfb49c;
+    color: #755700;
+}
+
+.job-status-container .status-btn-offer {
+    background: #aacf9c;
+    color: #247d02;
+}
+
+.job-status-container .status-btn-rejected {
+    background: #cf9c9c;
+    color: #890000;
+}
+
+.job-status-container .status-btn-archived {
+    background: #e2e8f0;
+    color: #64748b;
+}
+
+.job-status-label:hover {
+    opacity: 0.9;
+}
+
+.job-status-container .job-status-input:checked + .job-status-label {
+    border-color: #3f3f3f;
+    font-weight: bold;
+}
+
+.job-status-container .job-status-input:checked + .job-status-label::after {
+    content: '✓';
+    position: absolute;
+    right: 0.35rem;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.75rem;
+}
+
+/* Custom Interest Level Selector in Modal (Excited = Green, Interested = Blue, Meh = Yellow) */
+.job-interest-container .job-interest-input {
+    display: none;
+}
+
+.job-interest-container .job-interest-label {
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    padding: 0.45rem;
+    margin-bottom: 0.2rem;
+    cursor: pointer;
+    border: 2px solid transparent;
+    box-sizing: border-box;
+    position: relative;
+    border-radius: 0.5rem;
+    font-weight: 600;
+}
+
+/* Excited: Low / Green palette */
+.job-interest-container .interest-excited {
+    background: #aacf9c;
+    color: #247d02;
+}
+
+/* Interested: Lowest / Blue palette */
+.job-interest-container .interest-interested {
+    background: #9ccccf;
+    color: #076c73;
+}
+
+/* Meh: Alarming / Yellow palette */
+.job-interest-container .interest-meh {
+    background: #cecf9c;
+    color: #656700;
+}
+
+.job-interest-label:hover {
+    opacity: 0.9;
+}
+
+.job-interest-container .job-interest-input:checked + .job-interest-label {
+    border-color: #3f3f3f;
+    font-weight: bold;
+}
+
+.job-interest-container .job-interest-input:checked + .job-interest-label::after {
+    content: '✓';
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+}
+

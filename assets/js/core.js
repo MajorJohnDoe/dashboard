@@ -1012,12 +1012,183 @@ const PanelModalManager = (() => {
     return { init };
 })();
 
+// Generic Table Select Manager (For Multi-Select & Batch Actions)
+const TableSelectManager = (() => {
+    function init() {
+        document.querySelectorAll('[data-selectable-table]').forEach(bindTable);
+    }
+
+    function bindTable(table) {
+        if (table.dataset.selectManagerBound === 'true') return;
+        table.dataset.selectManagerBound = 'true';
+
+        const tableId = table.id;
+        const selectAll = table.querySelector('[data-table-select-all]');
+        const rowCheckboxes = table.querySelectorAll('.job-row-checkbox, [data-row-checkbox]');
+        const batchBar = document.querySelector(`[data-batch-bar="${tableId}"]`) || document.querySelector('[data-batch-bar]');
+        const counter = document.querySelector(`[data-selected-count="${tableId}"]`) || document.querySelector('[data-selected-count]');
+
+        function updateState() {
+            const currentRows = table.querySelectorAll('.job-row-checkbox, [data-row-checkbox]');
+            const checked = table.querySelectorAll('.job-row-checkbox:checked, [data-row-checkbox]:checked');
+            const count = checked.length;
+
+            if (counter) counter.textContent = count;
+
+            if (batchBar) {
+                if (count > 0) batchBar.classList.add('visible');
+                else batchBar.classList.remove('visible');
+            }
+
+            if (selectAll) {
+                if (count === 0) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                } else if (count === currentRows.length) {
+                    selectAll.checked = true;
+                    selectAll.indeterminate = false;
+                } else {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = true;
+                }
+            }
+        }
+
+        if (selectAll) {
+            selectAll.onchange = (e) => {
+                const isChecked = e.target.checked;
+                table.querySelectorAll('.job-row-checkbox, [data-row-checkbox]').forEach(cb => {
+                    cb.checked = isChecked;
+                    const row = cb.closest('tr');
+                    if (row) {
+                        if (isChecked) row.classList.add('row-selected');
+                        else row.classList.remove('row-selected');
+                    }
+                });
+                updateState();
+            };
+        }
+
+        rowCheckboxes.forEach(cb => {
+            cb.onchange = () => {
+                const row = cb.closest('tr');
+                if (row) {
+                    if (cb.checked) row.classList.add('row-selected');
+                    else row.classList.remove('row-selected');
+                }
+                updateState();
+            };
+        });
+
+        const deselectButtons = document.querySelectorAll(`[data-deselect-all="${tableId}"], [data-deselect-all]`);
+        deselectButtons.forEach(btn => {
+            btn.onclick = () => {
+                table.querySelectorAll('.job-row-checkbox, [data-row-checkbox]').forEach(cb => {
+                    cb.checked = false;
+                    cb.closest('tr')?.classList.remove('row-selected');
+                });
+                if (selectAll) {
+                    selectAll.checked = false;
+                    selectAll.indeterminate = false;
+                }
+                updateState();
+            };
+        });
+    }
+
+    return { init, bindTable };
+})();
+
+// Generic Table Filter Manager (Client-side fast search & dropdown filtering)
+const TableFilterManager = (() => {
+    function init() {
+        document.querySelectorAll('[data-filter-target]').forEach(bindFilterGroup);
+    }
+
+    function bindFilterGroup(group) {
+        const targetSelector = group.dataset.filterTarget;
+        const table = document.querySelector(targetSelector);
+        if (!table) return;
+
+        const searchInput = group.querySelector('[data-filter-search]');
+        const selectFilters = group.querySelectorAll('[data-filter-key]');
+        const togglePills = group.querySelectorAll('[data-filter-toggle]');
+        const emptyState = document.querySelector(`[data-filter-empty="${targetSelector.replace('#', '')}"]`) || table.querySelector('[data-filter-empty]');
+
+        function applyFilters() {
+            const rows = table.querySelectorAll('tbody tr[data-filter-row]');
+            if (!rows.length) return;
+
+            const searchQuery = (searchInput?.value || '').toLowerCase().trim();
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                let matches = true;
+
+                // 1. Text search
+                if (searchQuery) {
+                    const rowText = row.textContent.toLowerCase();
+                    if (!rowText.includes(searchQuery)) matches = false;
+                }
+
+                // 2. Select dropdown filters
+                if (matches) {
+                    selectFilters.forEach(select => {
+                        const key = select.dataset.filterKey;
+                        const val = select.value;
+                        if (val && val !== 'all') {
+                            const rowVal = row.getAttribute(`data-${key}`) || '';
+                            if (rowVal !== val) matches = false;
+                        }
+                    });
+                }
+
+                // 3. Toggle pills
+                if (matches) {
+                    togglePills.forEach(pill => {
+                        if (pill.classList.contains('active')) {
+                            const key = pill.dataset.filterToggle;
+                            const rowVal = row.getAttribute(`data-${key}`);
+                            if (rowVal !== 'true') matches = false;
+                        }
+                    });
+                }
+
+                if (matches) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            if (emptyState) {
+                emptyState.style.display = visibleCount === 0 ? '' : 'none';
+            }
+        }
+
+        if (searchInput) searchInput.oninput = applyFilters;
+        selectFilters.forEach(sel => sel.onchange = applyFilters);
+        togglePills.forEach(pill => {
+            pill.onclick = (e) => {
+                e.preventDefault();
+                pill.classList.toggle('active');
+                applyFilters();
+            };
+        });
+    }
+
+    return { init, bindFilterGroup };
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
     ModalManager.init();
     SmallPopupManager.init();
     PanelModalManager.init();
     GlobalMessagePopup.init();
     TinyMCEManager.init();
+    TableSelectManager.init();
+    TableFilterManager.init();
     
     // Process HTMX attributes on panel-modal triggers after HTMX is loaded
     if (typeof htmx !== 'undefined') {
@@ -1025,4 +1196,10 @@ document.addEventListener('DOMContentLoaded', () => {
             htmx.process(el);
         });
     }
+});
+
+// Re-init generic table handlers after HTMX content swap
+document.body.addEventListener('htmx:afterSwap', () => {
+    TableSelectManager.init();
+    TableFilterManager.init();
 });
