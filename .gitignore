@@ -18,3 +18,5 @@ logs/*
 user_upload_temp/*
 !user_upload_temp/.gitkeep
 AGENTS.md
+
+.github/
