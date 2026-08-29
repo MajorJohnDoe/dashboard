@@ -32,6 +32,7 @@ $authMiddleware = new AuthMiddleware($user);
 $router->addRoute('GET', '/',               'taskboard/page/index',             ['title' => 'Task Dashboard', 'css' => ['layout'], 'js' => ['notifications'], 'full_page' => true], [$authMiddleware]);
 $router->addRoute('GET', '/board',          'taskboard/page/view_taskboard',    ['title' => 'Task Management Board', 'css' => ['layout', 'task'], 'js' => ['task.board', 'notifications'],'external_js' => ['/node_modules/sortablejs/Sortable.min.js', '/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
 $router->addRoute('GET', '/stickynotes',    'stickynote/page/index',            ['title' => 'Sticky Notes', 'css' => ['layout', 'stickynotes'], 'js' => ['notifications'], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
+$router->addRoute('GET', '/jobs',           'jobs/page/index',                  ['title' => 'Job Applications', 'css' => ['layout', 'jobs'], 'js' => ['jobs', 'notifications'], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
 
 // Login/logout route (no authentication middleware)
 $router->addRoute(['GET', 'POST'], '/login', 'core/login', ['title' => 'Login', 'full_page' => false]);
@@ -76,6 +77,15 @@ $router->addPartialRoute(['GET', 'POST'],           '/stickynotes/audio-transcri
 
 $router->addPartialRoute(['GET', 'POST'],           '/stickynotes/search',                      'stickynote/partial/note.search', [$authMiddleware]);
 //$router->addPartialRoute('POST',                    '/stickynotes/upload-image',            'Stickynote\StickyNoteController@handleImageUpload', [$authMiddleware]);
+
+// ****************************************************************
+// Jobs dashboard routes
+// ****************************************************************
+$router->addPartialRoute(['GET', 'POST', 'DELETE'], '/jobs/dialog/:action',                     'jobs/partial/dialog.job', [$authMiddleware]);
+$router->addPartialRoute(['GET', 'POST', 'DELETE'], '/jobs/dialog/:action/:job_id',             'jobs/partial/dialog.job', [$authMiddleware]);
+$router->addPartialRoute('GET',                     '/jobs/table',                              'jobs/partial/table', [$authMiddleware]);
+$router->addPartialRoute('GET',                     '/jobs/stats',                              'jobs/partial/stats', [$authMiddleware]);
+$router->addPartialRoute('POST',                    '/jobs/batch',                              'jobs/partial/batch.handler', [$authMiddleware]);
 
 // ****************************************************************
 // Task dashboard routes

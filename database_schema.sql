@@ -1,58 +1,81 @@
--- phpMyAdmin SQL Dump
--- version 5.2.2
--- https://www.phpmyadmin.net/
---
--- Värd: db
--- Tid vid skapande: 13 feb 2026 kl 22:48
--- Serverversion: 11.4.4-MariaDB-ubu2404
--- PHP-version: 8.2.27
-
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
 
---
--- Databas: `todoboard`
---
+CREATE TABLE IF NOT EXISTS `job_applications` (
+  `id` INT(11) NOT NULL AUTO_INCREMENT,
+  `user_id` INT(11) NOT NULL,
+  `company` VARCHAR(150) NOT NULL,
+  `position` VARCHAR(150) NOT NULL,
+  `department` VARCHAR(100) NULL DEFAULT NULL,
+  `status` ENUM('wishlist', 'applied', 'interviewing', 'offer', 'rejected', 'archived') NOT NULL DEFAULT 'wishlist',
+  `job_type` ENUM('lia', 'full-time', 'part-time', 'contract', 'internship', 'thesis') NOT NULL DEFAULT 'lia',
+  `work_model` ENUM('remote', 'hybrid', 'onsite') NOT NULL DEFAULT 'remote',
+  `interest_level` ENUM('dream', 'excited', 'interested', 'meh') NOT NULL DEFAULT 'interested',
+  `match_score` TINYINT UNSIGNED NULL DEFAULT NULL,
+  `source` VARCHAR(100) NULL DEFAULT NULL,
+  `salary_range` VARCHAR(80) NULL DEFAULT NULL,
+  `notes` MEDIUMTEXT NULL DEFAULT NULL,
+  `applied_date` DATE NULL DEFAULT NULL,
+  `deadline_date` DATE NULL DEFAULT NULL,
+  `status_updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_user_status` (`user_id`, `status`),
+  KEY `idx_user_job_type` (`user_id`, `job_type`),
+  KEY `idx_user_updated` (`user_id`, `status_updated_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
 
---
--- Tabellstruktur `board_shares`
---
-
-CREATE TABLE `board_shares` (
-  `id` int(11) NOT NULL,
+-- Create board shares table for handling board access permissions
+CREATE TABLE IF NOT EXISTS `board_shares` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `board_id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
   `shared_by_user_id` int(11) NOT NULL,
-  `access_level` enum('read','write') NOT NULL DEFAULT 'read',
-  `status` enum('pending','accepted','declined') NOT NULL DEFAULT 'pending',
-  `created_at` timestamp NULL DEFAULT current_timestamp()
+  `access_level` ENUM('read', 'write') NOT NULL DEFAULT 'read',
+  `status` ENUM('pending', 'accepted', 'declined') NOT NULL DEFAULT 'pending',
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `unique_share` (`board_id`, `user_id`),
+  FOREIGN KEY (`board_id`) REFERENCES `tm_board`(`id`) ON DELETE CASCADE,
+  KEY `board_user_idx` (`board_id`, `user_id`, `status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-
--- --------------------------------------------------------
-
---
--- Tabellstruktur `notifications`
---
-
-CREATE TABLE `notifications` (
-  `id` int(11) NOT NULL,
+-- Create notifications table
+CREATE TABLE IF NOT EXISTS `notifications` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
-  `type` enum('board_invite','board_accept','board_decline') NOT NULL,
-  `data` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`data`)),
-  `is_read` tinyint(1) DEFAULT 0,
-  `created_at` timestamp NULL DEFAULT current_timestamp()
+  `type` ENUM('board_invite', 'board_accept', 'board_decline') NOT NULL,
+  `data` JSON NOT NULL,
+  `is_read` BOOLEAN DEFAULT FALSE,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `user_notifications_idx` (`user_id`, `is_read`, `created_at`),
+  KEY `notifications_type_idx` (`type`, `created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Update notifications table to support board_access_changed type
+ALTER TABLE `notifications` 
+MODIFY COLUMN `type` ENUM('board_invite', 'board_accept', 'board_decline', 'board_access_changed') NOT NULL;
 
--- --------------------------------------------------------
-
---
--- Tabellstruktur `shared_item_images`
---
+-- Add chat notification types
+ALTER TABLE `notifications` 
+MODIFY COLUMN `type` ENUM(
+    'board_invite', 
+    'board_accept', 
+    'board_decline', 
+    'board_access_changed',
+    'chat_message',
+    'chat_mention',
+    'chat_room_invite',
+    'task_due_soon',
+    'task_overdue',
+    'task_assigned',
+    'task_completed',
+    'task_comment'
+) NOT NULL;
 
 CREATE TABLE `shared_item_images` (
   `id` int(11) NOT NULL,
@@ -66,12 +89,6 @@ CREATE TABLE `shared_item_images` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
--- --------------------------------------------------------
-
---
--- Tabellstruktur `sticky_categories`
---
-
 CREATE TABLE `sticky_categories` (
   `id` int(11) NOT NULL,
   `user_id` int(11) NOT NULL,
@@ -79,11 +96,12 @@ CREATE TABLE `sticky_categories` (
   `color` varchar(7) NOT NULL DEFAULT '#000000'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
 
---
--- Tabellstruktur `sticky_notes`
---
+INSERT INTO `sticky_categories` (`id`, `user_id`, `title`, `color`) VALUES
+(13, 3831, 'Ideas', '#c4b3e6'),
+(14, 3831, 'Shopping list', '#b2e4e5'),
+(15, 3831, 'Unraid', '#b3e6bd');
+
 
 CREATE TABLE `sticky_notes` (
   `id` int(11) NOT NULL,
@@ -97,11 +115,10 @@ CREATE TABLE `sticky_notes` (
   `updated_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- --------------------------------------------------------
 
---
--- Tabellstruktur `tm_board`
---
+INSERT INTO `sticky_notes` (`id`, `user_id`, `category_id`, `title`, `content`, `file_path`, `is_pinned`, `created_at`, `updated_at`) VALUES
+(109, 3831, 13, 'Using Card Labels to Categorize Kanban Cards', '<p class=\"whitespace-pre-wrap break-words\">When creating a Kanban board, it\'s crucial to begin by identifying the various types of work items, or \"Kanban cards,\" that will populate your board. While it may seem intuitive to jump straight into designing the board layout, taking the time to define your card types first offers several advantages:</p>\n<ol class=\"-mt-1 list-decimal space-y-2 pl-8\">\n<li class=\"whitespace-normal break-words\"><strong>Improved Efficiency:</strong> By establishing clear categories upfront, you can design a board structure that accurately reflects your workflow.</li>\n<li class=\"whitespace-normal break-words\"><strong>Team Alignment:</strong> Discussing work item types as a team ensures everyone has a shared understanding of the different tasks you manage.</li>\n<li class=\"whitespace-normal break-words\"><strong>Standardized Nomenclature:</strong> This process naturally leads to the creation of a common language for describing work, enhancing communication across the team.</li>\n<li class=\"whitespace-normal break-words\"><strong>Better Visualization:</strong> Well-defined card types make it easier to quickly grasp the nature of work at each stage of your process.</li>\n<li class=\"whitespace-normal break-words\"><strong>Facilitates Analysis:</strong> Clear categorization allows for more meaningful metrics and insights about your workflow over time.</li>\n</ol>\n<p class=\"whitespace-pre-wrap break-words\">Remember, your Kanban card types should reflect the unique aspects of your team\'s work. Common examples might include \"Bug Fix,\" \"Feature Development,\" \"Customer Request,\" or \"Maintenance Task.\"</p>\n<p class=\"whitespace-pre-wrap break-words\">By prioritizing this step, you lay a strong foundation for a Kanban system that accurately represents your team\'s work and promotes more effective project management.</p>', NULL, 0, '2024-09-24 10:44:15', '2024-09-24 10:44:15');
+
 
 CREATE TABLE `tm_board` (
   `id` int(11) NOT NULL,
@@ -111,11 +128,10 @@ CREATE TABLE `tm_board` (
   `tm_name` varchar(50) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Tabellstruktur `tm_column`
---
+INSERT INTO `tm_board` (`id`, `user_id`, `team_id`, `tm_last_update`, `tm_name`) VALUES
+(133, 3831, NULL, '2024-09-24 10:07:50', 'Work');
+
 
 CREATE TABLE `tm_column` (
   `id` int(11) NOT NULL,
@@ -127,9 +143,13 @@ CREATE TABLE `tm_column` (
   `column_flag` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1 = resolved flag'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Tabellstruktur `tm_label`
---
+
+INSERT INTO `tm_column` (`id`, `parent_id`, `column_order`, `column_task_order`, `column_name`, `column_max_display_tasks`, `column_flag`) VALUES
+(186, 133, 60, 2, 'To Do\'s', 2, 0),
+(187, 133, 60, 2, 'In progress', 2, 0),
+(188, 133, 60, 2, 'Review', 2, 0),
+(189, 133, 60, 1, 'Done', 2, 1);
+
 
 CREATE TABLE `tm_label` (
   `id` int(11) NOT NULL,
@@ -139,11 +159,16 @@ CREATE TABLE `tm_label` (
   `is_favorite` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
 
---
--- Tabellstruktur `tm_task`
---
+INSERT INTO `tm_label` (`id`, `board_id`, `label_color`, `label_name`, `is_favorite`) VALUES
+(93, 133, '#f1cff5', 'Bug', 0),
+(94, 133, '#cff5e1', 'Coding', 0),
+(95, 133, '#f5cfe6', 'Accounting', 0),
+(96, 133, '#f5e5cf', 'Research', 0),
+(97, 133, '#f5cfcf', 'Review', 0),
+(98, 133, '#ededed', 'Feature', 0),
+(99, 133, '#cfe1f5', 'Design', 0);
+
 
 CREATE TABLE `tm_task` (
   `task_id` int(11) NOT NULL,
@@ -158,11 +183,16 @@ CREATE TABLE `tm_task` (
   `task_resolved_date` datetime DEFAULT NULL COMMENT 'If column has "resolved flag" set datetime'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
--- --------------------------------------------------------
+INSERT INTO `tm_task` (`task_id`, `board_id`, `column_id`, `task_title`, `task_desc`, `task_checklist`, `task_priority`, `task_created`, `task_modified`, `task_resolved_date`) VALUES
+(723, 133, 186, 'Add search bar to labels', '', NULL, 4, '2024-09-24 10:16:30', '2024-09-24 10:18:22', NULL),
+(725, 133, 186, 'New tasks are appearing at the bottom of the feed', '', NULL, 2, '2024-09-24 10:18:55', '2024-09-24 10:18:55', NULL),
+(726, 133, 186, 'Add border to images', '', NULL, 0, '2024-09-24 10:19:12', '2024-09-24 10:19:12', NULL),
+(727, 133, 189, 'Refactor core.js', '', NULL, 0, '2024-09-24 10:19:45', '2024-09-24 10:19:45', '2024-09-24 10:19:48'),
+(728, 133, 188, 'Create a account settings modal', '', NULL, 0, '2024-09-24 10:21:22', '2024-09-24 10:21:22', NULL),
+(729, 133, 187, 'Fix padding on modals and sticky notes', '', NULL, 3, '2024-09-24 10:21:57', '2024-09-24 10:21:57', NULL),
+(730, 133, 186, 'Create a upload function for profile pictures', '', NULL, 0, '2024-09-24 10:42:36', '2024-09-24 10:42:36', NULL),
+(731, 133, 188, 'Look up what features a typical Kanboard is using', '', '[{\"description\":\"Tasks\",\"status\":\"complete\"},{\"description\":\"Columns\",\"status\":\"complete\"},{\"description\":\"And so on..\",\"status\":\"incomplete\"}]', 4, '2024-09-24 10:46:13', '2024-09-24 10:46:58', NULL);
 
---
--- Tabellstruktur `tm_task_label_rel`
---
 
 CREATE TABLE `tm_task_label_rel` (
   `id` int(11) NOT NULL,
@@ -171,9 +201,18 @@ CREATE TABLE `tm_task_label_rel` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
---
--- Tabellstruktur `user`
---
+INSERT INTO `tm_task_label_rel` (`id`, `task_id`, `label_id`) VALUES
+(2075, 723, 94),
+(2076, 725, 93),
+(2077, 726, 99),
+(2078, 727, 94),
+(2079, 728, 94),
+(2080, 728, 99),
+(2082, 729, 94),
+(2081, 729, 99),
+(2083, 730, 94),
+(2087, 731, 96);
+
 
 CREATE TABLE `user` (
   `user_id` mediumint(8) NOT NULL,
@@ -188,11 +227,9 @@ CREATE TABLE `user` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
--- --------------------------------------------------------
+INSERT INTO `user` (`user_id`, `user_type`, `user_username`, `user_password`, `user_email`, `user_reg_date`, `active_task_board`, `gpt_api_key`, `user_avatar`) VALUES
+(3831, 0, 'johndoe', '07b4cfca1db57eb8a3b85a64f2034036e38a8130389879c4aa3661fc3e38a1d64257019613b222446d4b71dfec6a6e49ecd929d7ab63089924fb8a547d4c26c9', '', 1692205924, 133, '', '');
 
---
--- Tabellstruktur `user_session`
---
 
 CREATE TABLE `user_session` (
   `id` int(11) NOT NULL,
@@ -207,188 +244,84 @@ CREATE TABLE `user_session` (
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
---
--- Index för dumpade tabeller
---
+INSERT INTO `user_session` (`id`, `session`, `token`, `userid`, `sess_start`, `sess_expire`, `last_activity`, `ip`, `user_agent`) VALUES
+(157, 'eeea4ed271e3234d583416a7713490d6', 'a7049ff9caa4bd834b661f69759e7d496236a18384c676d44b02500df4298dbb', 3831, '2024-09-24 10:06:33', '2024-10-24 10:06:33', '2024-09-24 10:06:33', '172.55.0.3', NULL);
 
---
--- Index för tabell `board_shares`
---
-ALTER TABLE `board_shares`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `unique_share` (`board_id`,`user_id`),
-  ADD KEY `board_user_idx` (`board_id`,`user_id`,`status`);
 
---
--- Index för tabell `notifications`
---
-ALTER TABLE `notifications`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `user_notifications_idx` (`user_id`,`is_read`,`created_at`),
-  ADD KEY `notifications_type_idx` (`type`,`created_at`);
-
---
--- Index för tabell `shared_item_images`
---
 ALTER TABLE `shared_item_images`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id` (`item_id`),
   ADD KEY `item_type` (`item_type`);
 
---
--- Index för tabell `sticky_categories`
---
 ALTER TABLE `sticky_categories`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`);
 
---
--- Index för tabell `sticky_notes`
---
+
 ALTER TABLE `sticky_notes`
   ADD PRIMARY KEY (`id`),
   ADD KEY `user_id` (`user_id`),
   ADD KEY `category_id` (`category_id`);
 ALTER TABLE `sticky_notes` ADD FULLTEXT KEY `title` (`title`,`content`);
 
---
--- Index för tabell `tm_board`
---
 ALTER TABLE `tm_board`
   ADD PRIMARY KEY (`id`);
 
---
--- Index för tabell `tm_column`
---
 ALTER TABLE `tm_column`
   ADD PRIMARY KEY (`id`);
 
---
--- Index för tabell `tm_label`
---
 ALTER TABLE `tm_label`
   ADD PRIMARY KEY (`id`),
   ADD KEY `board_id` (`board_id`,`label_name`);
 ALTER TABLE `tm_label` ADD FULLTEXT KEY `label_name` (`label_name`);
 
---
--- Index för tabell `tm_task`
---
 ALTER TABLE `tm_task`
   ADD PRIMARY KEY (`task_id`),
   ADD KEY `todo_list_id` (`board_id`,`column_id`);
 
---
--- Index för tabell `tm_task_label_rel`
---
 ALTER TABLE `tm_task_label_rel`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `task_id` (`task_id`,`label_id`);
 
---
--- Index för tabell `user`
---
 ALTER TABLE `user`
   ADD PRIMARY KEY (`user_id`),
   ADD UNIQUE KEY `username` (`user_username`),
   ADD KEY `user_email` (`user_email`);
 
---
--- Index för tabell `user_session`
---
 ALTER TABLE `user_session`
   ADD PRIMARY KEY (`id`),
   ADD KEY `session` (`session`);
 
---
--- AUTO_INCREMENT för dumpade tabeller
---
-
---
--- AUTO_INCREMENT för tabell `board_shares`
---
-ALTER TABLE `board_shares`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
-
---
--- AUTO_INCREMENT för tabell `notifications`
---
-ALTER TABLE `notifications`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
-
---
--- AUTO_INCREMENT för tabell `shared_item_images`
---
 ALTER TABLE `shared_item_images`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=32;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=27;
 
---
--- AUTO_INCREMENT för tabell `sticky_categories`
---
 ALTER TABLE `sticky_categories`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
---
--- AUTO_INCREMENT för tabell `sticky_notes`
---
 ALTER TABLE `sticky_notes`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=121;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=110;
 
---
--- AUTO_INCREMENT för tabell `tm_board`
---
 ALTER TABLE `tm_board`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=138;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=134;
 
---
--- AUTO_INCREMENT för tabell `tm_column`
---
 ALTER TABLE `tm_column`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=195;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=190;
 
---
--- AUTO_INCREMENT för tabell `tm_label`
---
 ALTER TABLE `tm_label`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=103;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=100;
 
---
--- AUTO_INCREMENT för tabell `tm_task`
---
 ALTER TABLE `tm_task`
-  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1465;
+  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=732;
 
---
--- AUTO_INCREMENT för tabell `tm_task_label_rel`
---
 ALTER TABLE `tm_task_label_rel`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3459;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2088;
 
---
--- AUTO_INCREMENT för tabell `user`
---
 ALTER TABLE `user`
-  MODIFY `user_id` mediumint(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3833;
+  MODIFY `user_id` mediumint(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3832;
 
---
--- AUTO_INCREMENT för tabell `user_session`
---
 ALTER TABLE `user_session`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=218;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=158;
 
---
--- Restriktioner för dumpade tabeller
---
-
---
--- Restriktioner för tabell `board_shares`
---
-ALTER TABLE `board_shares`
-  ADD CONSTRAINT `board_shares_ibfk_1` FOREIGN KEY (`board_id`) REFERENCES `tm_board` (`id`) ON DELETE CASCADE;
-
---
--- Restriktioner för tabell `sticky_notes`
---
 ALTER TABLE `sticky_notes`
   ADD CONSTRAINT `sticky_notes_ibfk_1` FOREIGN KEY (`category_id`) REFERENCES `sticky_categories` (`id`) ON DELETE CASCADE;
 COMMIT;

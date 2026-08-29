@@ -820,6 +820,322 @@ footer {
     color: #d1d5db;
 }
 
+/* ==========================================================================
+   Core Data Table, Toolbar, Label Badges & Batch Action Components
+   ========================================================================== */
+
+/* Data Table Card Container */
+.data-table-card {
+    border: 0.1rem solid #414b55;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.data-table-responsive {
+    overflow-x: auto;
+    max-height: calc(100vh - 280px);
+    position: relative;
+    border-radius: 0.3rem;
+    border: 0.1rem solid #3a4751;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+   
+    white-space: nowrap;
+    background: #2c3842;
+}
+
+.data-table thead {
+    background: #33414d;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 0.1rem solid #414b55;
+}
+
+.data-table th {
+    padding: 0.75rem 0.9rem;
+    font-weight: 500;
+    font-size: 0.82rem;
+    color: #e5edf8;
+    user-select: none;
+}
+
+.data-table th.sortable {
+    cursor: pointer;
+}
+
+.data-table th.sortable:hover {
+    color: #ffffff;
+    background: #3a4751;
+}
+
+.data-table tbody tr {
+    border-bottom: 0.1rem solid #394754;
+    transition: background-color 0.12s ease;
+    background: #2c3842;
+}
+
+.data-table tbody tr:hover {
+    background-color: #33414d;
+}
+
+.data-table tbody tr.row-selected {
+    background-color: #26493e !important;
+}
+
+.data-table td {
+    padding: 0.7rem 0.9rem;
+    vertical-align: middle;
+    color: #e5edf8;
+}
+
+/* Table Actions Cell */
+.data-table-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.data-table-actions .btn-icon {
+    color: #8da4be;
+    padding: 0.35rem 0.45rem;
+    border-radius: 0.25rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.12s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.data-table-actions .btn-icon:hover {
+    background: #3a4751;
+    color: #70ed86;
+}
+
+.data-table-actions .btn-icon.btn-icon-danger:hover {
+    background: rgba(221, 97, 97, 0.25);
+    color: #dd6161;
+}
+
+/* Table Empty State */
+.data-table-empty {
+    text-align: center;
+    padding: 3rem 1.5rem;
+    color: #8da4be;
+}
+
+.data-table-empty h3 {
+    font-size: 1.1rem;
+    color: #e5edf8;
+    margin-bottom: 0.4rem;
+}
+
+/* Core Toolbar Card */
+.toolbar-card {
+    background-color: #465561;
+    border: 0.1rem solid #414b55;
+    border-radius: 0.5rem;
+    padding: 0.7rem 0.9rem;
+    margin-bottom: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.65rem;
+}
+
+.toolbar-group {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+.search-input-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.search-input-box input[type="search"],
+.search-input-box input[type="text"] {
+    background: #2c3842;
+    border: 0.1rem solid #414b55;
+    border-radius: 0.3rem;
+    padding: 0.45rem 0.75rem;
+    color: #e5edf8;
+    min-width: 250px;
+    outline: none;
+    transition: border-color 0.15s, background-color 0.15s;
+}
+
+.search-input-box input:focus {
+    background-color: #232d35;
+    border-color: #3896c9;
+}
+
+.search-input-box input::placeholder {
+    color: #8da4be;
+}
+
+.select-filter {
+    background: #2c3842;
+    border: 0.1rem solid #414b55;
+    border-radius: 0.3rem;
+    padding: 0.45rem 0.75rem;
+    color: #e5edf8;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.15s;
+}
+
+.select-filter:focus {
+    border-color: #3896c9;
+}
+
+/* Core Filter Pill Button */
+.btn-filter-pill {
+    background: #2c3842;
+    color: #f6c07d;
+    border: 0.1rem solid #d5913c;
+    padding: 0.42rem 0.75rem;
+    border-radius: 0.3rem;
+    cursor: pointer;
+
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    transition: all 0.15s ease;
+}
+
+.btn-filter-pill:hover,
+.btn-filter-pill.active {
+    background: #3a4751;
+    color: #ffffff;
+    border-color: #e6a836;
+}
+
+/* Core Floating Batch Action Bar */
+.batch-action-bar {
+    display: none;
+    background: #2c3842;
+    border: 0.1rem solid #3896c9;
+    border-radius: 0.5rem;
+    padding: 0.6rem 1rem;
+    margin-bottom: 1rem;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    animation: batchSlideDown 0.15s ease-out;
+}
+
+.batch-action-bar.visible {
+    display: flex;
+}
+
+@keyframes batchSlideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.batch-action-bar .batch-info {
+    font-weight: 500;
+    color: #79c5ef;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.86rem;
+}
+
+.batch-action-bar .batch-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Core Label Badges - Shared Pastel Palette */
+.label-badge {
+    font-size: 90%;
+    display: inline-block;
+    border-radius: 0.2rem;
+    color: #000;
+    font-weight: 600;
+    padding: 0.125rem 0.4375rem;
+    margin: 0.15rem 0.25rem 0.15rem 0;
+}
+
+.label-cyan,
+.label-personal,
+.label-remote {
+    background: #d7ebff;
+}
+
+.label-purple,
+.label-lia {
+    background: #ebcdf9;
+}
+
+.label-mint,
+.label-accounting,
+.label-hybrid {
+    background: #9ccccf;
+}
+
+.label-green,
+.label-full-time,
+.label-fulltime {
+    background: #aacf9c;
+}
+
+.label-olive,
+.label-contract,
+.label-part-time {
+    background: #cecf9c;
+}
+
+.label-tan,
+.label-onsite {
+    background: #cfb49c;
+}
+
+.label-urgent,
+.label-stale {
+    background: #ffd4d4;
+}
+
+.label-dream {
+    background: #86c96d;
+}
+
+/* Core Score / Percentage Badges */
+.score-badge {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0.5rem;
+    background-color: #242e37;
+    padding: 0.15rem 0.55rem;
+    font-weight: 600;
+    font-size: 0.76rem;
+}
+
+.perc100 { color: #45b475; }
+.perc80 { color: #4e996e; }
+.perc50 { color: #7c994e; }
+.perc30 { color: #99854e; }
+.perc10,
+.perc-low { color: #dd6161; }
+
 @media (max-width: 2000px) {
     :root {
         --sidebar-width: 80px;

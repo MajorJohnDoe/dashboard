@@ -6,6 +6,11 @@ class View {
         error_log("Attempting to render template: $template");
         extract($data);
         
+        // Ensure browser receives proper HTML Content-Type header
+        if (!headers_sent()) {
+            header('Content-Type: text/html; charset=UTF-8');
+        }
+        
         $templatePath = $_SERVER['DOCUMENT_ROOT'] . "/views/{$template}.php";
     
     if (!file_exists($templatePath)) {
