@@ -53,4 +53,53 @@ final class HtmxEvents
     {
         // Static class - not instantiable
     }
+
+    /**
+     * Build a standard success trigger payload: toast message plus any
+     * extra events (e.g. list refresh, close modal).
+     *
+     * @param string $message       Toast message shown to the user
+     * @param array  $extraTriggers Additional HX-Trigger events, e.g. [HtmxEvents::CLOSE_MODAL => true]
+     * @return array Ready to pass to triggerResponse()
+     */
+    public static function successResponse(string $message, array $extraTriggers = []): array
+    {
+        return array_merge($extraTriggers, [
+            self::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $message],
+        ]);
+    }
+
+    /**
+     * Build a standard error trigger payload: error toast plus any extra events.
+     *
+     * @param string $message       Error toast message shown to the user
+     * @param array  $extraTriggers Additional HX-Trigger events
+     * @return array Ready to pass to triggerResponse()
+     */
+    public static function errorResponse(string $message, array $extraTriggers = []): array
+    {
+        return array_merge($extraTriggers, [
+            self::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $message],
+        ]);
+    }
+
+    /**
+     * Send a success response and exit: toast + optional extra triggers.
+     * Convenience for the common view pattern:
+     *   triggerResponse(HtmxEvents::success('Task saved!', [HtmxEvents::CLOSE_MODAL => true]));
+     */
+    public static function success(string $message, array $extraTriggers = []): never
+    {
+        triggerResponse(self::successResponse($message, $extraTriggers));
+        exit;
+    }
+
+    /**
+     * Send an error response and exit: toast + optional extra triggers.
+     */
+    public static function error(string $message, array $extraTriggers = []): never
+    {
+        triggerResponse(self::errorResponse($message, $extraTriggers));
+        exit;
+    }
 }

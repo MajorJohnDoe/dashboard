@@ -2,6 +2,7 @@
 namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
+use Dashboard\Core\AccessGuard;
 
 class Board
 {
@@ -282,46 +283,16 @@ class Board
         return $this->db->q($sql, "i", $labelId);
     }
 
-    // Validate ownership or shared access to a board
+    // Validate ownership or shared access to a board (delegated to AccessGuard)
     public function validateBoardOwnership($userId, $boardId)
     {
-        // Check direct ownership
-        $sql = "SELECT 1 FROM `tm_board` WHERE `id` = ? AND `user_id` = ? LIMIT 1";
-        $result = $this->db->q($sql, "ii", $boardId, $userId);
-        
-        if ($result !== false && count($result) > 0) {
-            return true; // User owns the board
-        }
-
-        // Check shared access
-        $sql = "SELECT 1 FROM `board_shares` 
-                WHERE `board_id` = ? AND `user_id` = ? 
-                AND `status` = 'accepted'
-                LIMIT 1";
-        $result = $this->db->q($sql, "ii", $boardId, $userId);
-        
-        return $result !== false && count($result) > 0;
+        return (new AccessGuard($this->db))->canViewBoard((int)$userId, (int)$boardId);
     }
 
-    // Check if user has write access to a board
+    // Check if user has write access to a board (delegated to AccessGuard)
     public function validateBoardWriteAccess($userId, $boardId)
     {
-        // Check direct ownership (owners always have write access)
-        $sql = "SELECT 1 FROM `tm_board` WHERE `id` = ? AND `user_id` = ? LIMIT 1";
-        $result = $this->db->q($sql, "ii", $boardId, $userId);
-        
-        if ($result !== false && count($result) > 0) {
-            return true; // User owns the board
-        }
-
-        // Check shared write access
-        $sql = "SELECT 1 FROM `board_shares` 
-                WHERE `board_id` = ? AND `user_id` = ? 
-                AND `status` = 'accepted' AND `access_level` = 'write'
-                LIMIT 1";
-        $result = $this->db->q($sql, "ii", $boardId, $userId);
-        
-        return $result !== false && count($result) > 0;
+        return (new AccessGuard($this->db))->canWriteBoard((int)$userId, (int)$boardId);
     }
 
     // Validate ownership of a label by the user

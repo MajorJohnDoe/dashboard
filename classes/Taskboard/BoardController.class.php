@@ -23,61 +23,21 @@ class BoardController
     // Handle board invitation acceptance
     public function handleInvitationAccept()
     {
-        $boardId = $_POST['board_id'] ?? null;
-        $notificationId = $_POST['notification_id'] ?? null;
-
-        if (!$boardId) {
-            return ['success' => false, 'message' => 'Board ID is required'];
-        }
-
-        // Get board share details from the Board class
-        $shareResult = $this->board->getBoardShareDetails($boardId, $this->user->getUserId());
-        
-        if (empty($shareResult)) {
-            return ['success' => false, 'message' => 'Board share not found'];
-        }
-
-        $inviterId = $shareResult[0]['shared_by_user_id'];
-
-        // Mark the notification as read first
-        $notificationsController = new NotificationsController($this->db, $this->user, null);
-        if ($notificationId) {
-            $notificationsController->handleMarkAsRead($notificationId);
-        }
-
-        error_log("Board share query result: " . print_r($shareResult, true));
-        error_log("Found shared_by_user_id: $inviterId");
-
-        // Update the share status
-        error_log("Updating board share status to 'accepted'");
-        try {
-            $result = $this->board->updateBoardShareStatus($boardId, $this->user->getUserId(), 'accepted');
-        } catch (\Exception $e) {
-            error_log("Error updating board share status: " . $e->getMessage());
-            return ['success' => false, 'message' => 'Failed to update board share status: ' . $e->getMessage()];
-        }
-
-        if ($result) {
-            error_log("Board share status updated successfully");
-            // Create a notification for the inviter
-            $notificationService = new NotificationService($this->db);
-            $notificationService->notifyBoardAccept($inviterId, $boardId, $this->user->getUserId());
-
-            // Delete the invitation notification
-            $this->deleteBoardInviteNotification($boardId, $this->user->getUserId());
-
-            return [
-                'success' => true,
-                'notificationsUpdate' => true,
-                'message' => 'Board invitation accepted'
-            ];
-        }
-
-        return ['success' => false, 'message' => 'Failed to accept board invitation'];
+        return $this->handleInvitationResponse('accepted');
     }
 
     // Handle board invitation decline
     public function handleInvitationDecline()
+    {
+        return $this->handleInvitationResponse('declined');
+    }
+
+    /**
+     * Shared logic for accepting or declining a board invitation.
+     *
+     * @param string $decision 'accepted' or 'declined'
+     */
+    private function handleInvitationResponse(string $decision)
     {
         $boardId = $_POST['board_id'] ?? null;
         $notificationId = $_POST['notification_id'] ?? null;
@@ -102,12 +62,21 @@ class BoardController
         }
 
         // Update the share status
-        $result = $this->board->updateBoardShareStatus($boardId, $this->user->getUserId(), 'declined');
+        try {
+            $result = $this->board->updateBoardShareStatus($boardId, $this->user->getUserId(), $decision);
+        } catch (\Exception $e) {
+            error_log("Error updating board share status: " . $e->getMessage());
+            return ['success' => false, 'message' => 'Failed to update board share status.'];
+        }
 
         if ($result) {
             // Create a notification for the inviter
             $notificationService = new NotificationService($this->db);
-            $notificationService->notifyBoardDecline($inviterId, $boardId, $this->user->getUserId());
+            if ($decision === 'accepted') {
+                $notificationService->notifyBoardAccept($inviterId, $boardId, $this->user->getUserId());
+            } else {
+                $notificationService->notifyBoardDecline($inviterId, $boardId, $this->user->getUserId());
+            }
 
             // Delete the invitation notification
             $this->deleteBoardInviteNotification($boardId, $this->user->getUserId());
@@ -115,11 +84,11 @@ class BoardController
             return [
                 'success' => true,
                 'notificationsUpdate' => true,
-                'message' => 'Board invitation declined'
+                'message' => $decision === 'accepted' ? 'Board invitation accepted' : 'Board invitation declined'
             ];
         }
 
-        return ['success' => false, 'message' => 'Failed to decline board invitation'];
+        return ['success' => false, 'message' => 'Failed to ' . ($decision === 'accepted' ? 'accept' : 'decline') . ' board invitation'];
     }
 
     // Share a board with another user via email
@@ -201,15 +170,15 @@ class BoardController
         $response = $this->handleCreateBoard($newBoardName);
 
         if ($response['success']) {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::NEW_BOARD => true, 
-                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $response['message']]
-            ], false);
+            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+                $response['message'],
+                [
+                    \Dashboard\Core\HtmxEvents::NEW_BOARD => true,
+                    \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                ]
+            ), false);
         } else {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $response['message']]
-            ], false);
+            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($response['message']), false);
         }
 
         // Return an empty string because triggerResponse has already sent the response

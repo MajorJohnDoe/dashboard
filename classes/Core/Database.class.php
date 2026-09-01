@@ -3,180 +3,129 @@ namespace Dashboard\Core;
 
 use mysqli;
 use Exception;
+use RuntimeException;
 use Dashboard\Core\Interfaces\DatabaseInterface;
 
+/**
+ * Thrown when a query fails to prepare or execute.
+ */
+class DatabaseException extends RuntimeException
+{
+}
+
+/**
+ * Database access wrapper around mysqli.
+ *
+ * All queries go through q() which uses prepared statements exclusively.
+ * Errors are thrown as DatabaseException instead of being silently swallowed,
+ * so failures surface immediately with a clear message instead of cascading
+ * into confusing downstream behaviour.
+ */
 class Database implements DatabaseInterface {
-    protected $_mysqli;
-    protected $_debug;
-    protected $_error_string;
-    protected $_error_backtrace;
-    protected $sql_thread_id;
- 
+    protected mysqli $_mysqli;
+    protected bool $debug;
+    protected string $errorString = '';
+
     public function __construct(string $host, string $username, string $password, string $database, bool $debug = false)
     {
-        $this->_debug = $debug;
-        
+        $this->debug = $debug;
+
         try {
             mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
             $this->_mysqli = new mysqli($host, $username, $password, $database);
-            
-            // Set charset to utf8mb4
-            $this->_mysqli->set_charset("utf8mb4");
-            
-            error_log("Database connection successful");
+            $this->_mysqli->set_charset('utf8mb4');
         } catch (Exception $e) {
-            error_log("Database connection failed: " . $e->getMessage());
-            $this->handleException($e);
+            error_log('Database connection failed: ' . $e->getMessage());
+            throw new RuntimeException('Database connection failed: ' . $e->getMessage(), 0, $e);
         }
     }
- 
+
+    /**
+     * Execute a prepared statement.
+     *
+     * Return values by query kind:
+     *  - SELECT (result set exists): array of associative rows (empty array if none)
+     *  - INSERT/UPDATE/DELETE/etc.: int affected row count
+     *
+     * @param string $query  SQL with ? placeholders
+     * @param string $types  mysqli bind types string ('i', 's', 'd', 'b'), '' for no params
+     * @param mixed  ...$params bound parameter values
+     * @return array<int,array<string,mixed>>|int
+     * @throws DatabaseException on prepare/execute failure
+     */
     public function q($query, $types = "", ...$params)
     {
-    	$incoming_query = $query;
-        if ($query = $this->_mysqli->prepare($query))
-        {
-            if (func_num_args() > 1)
-            {
-                $x = func_get_args();
-                $args = array_merge(array(func_get_arg(1)),
-                    array_slice($x, 2));
-                $args_ref = array();
-                foreach($args as $k => &$arg) {
-                    $args_ref[$k] = &$arg; 
-                }
-                call_user_func_array(array($query, 'bind_param'), $args_ref);
-            }
+        try {
+            $stmt = $this->_mysqli->prepare($query);
+        } catch (Exception $e) {
+            $this->logError('Prepare failed: ' . $e->getMessage(), $query);
+            throw new DatabaseException('Query prepare failed: ' . $e->getMessage(), 0, $e);
+        }
 
-			// Execute Query
-            $query->execute();
-            	
-            if ($query->errno)
-            {
-              if ($this->_debug)
-              {
-                echo mysqli_error($this->_mysqli);
-                debug_print_backtrace();
-              }
-              
-              $this->_error_string .= mysqli_error($this->_mysqli);
-              //$this->_error_backtrace = $this->debug_string_backtrace();
-              
-              return false;
-            }
- 
- 			// if ($query->sqlstate == "00000") {
- 			if ($query->affected_rows > -1)
- 			{
-                return $query->affected_rows;
-            }
-            $params = array();
-            $meta = $query->result_metadata();
-            if ($meta) { // Always check if there's metadata to prevent errors
-                $row = array(); // Initialize $row here
-                while ($field = $meta->fetch_field()) {
-                    $row[$field->name] = null; // Initialize each field with null
-                    $params[] = &$row[$field->name]; // Now each $row element is correctly referenced
-                }
-
-                call_user_func_array(array($query, 'bind_result'), $params);
-            
-                $result = array();
-                while ($query->fetch()) {
-                    $r = array();
-                    foreach ($row as $key => $val) {
-                        $r[$key] = $val; // Copy each field in $row to $r
-                    }
-                    $result[] = $r;
-                }
-                $query->close();
-                return $result;
+        // Bind parameters when provided. mysqli_stmt::execute() accepts the
+        // params array directly (PHP 7.1+), no bind_param reference hack needed.
+        try {
+            if ($params !== []) {
+                $stmt->execute($params);
             } else {
-                $query->close(); // Close the query if no metadata, might indicate a non-select query
-                return array();
+                $stmt->execute();
             }
+        } catch (Exception $e) {
+            $stmt->close();
+            $this->logError('Execute failed: ' . $e->getMessage(), $query);
+            throw new DatabaseException('Query execute failed: ' . $e->getMessage(), 0, $e);
         }
-        else
-        {
-            if ($this->_debug)
-            {
-                echo $this->_mysqli->error;
-                debug_print_backtrace();
-            }
-            
-            $this->_error_string .= $this->_mysqli->error;
-            //$this->_error_backtrace = $this->debug_string_backtrace();
-            
-            return false;
+
+        // Determine whether this statement produces a result set.
+        $meta = $stmt->result_metadata();
+        if ($meta === false) {
+            // No result set: INSERT/UPDATE/DELETE/DDL — return affected rows.
+            $affected = $stmt->affected_rows;
+            $stmt->close();
+            return $affected;
         }
+        $meta->close();
+
+        // Result set: fetch all rows as associative arrays.
+        $result = $stmt->get_result();
+        $rows = $result !== false ? $result->fetch_all(MYSQLI_ASSOC) : [];
+        $stmt->close();
+
+        return $rows;
     }
- 
+
     // Start a transaction
-    public function beginTransaction() {
-        $this->_mysqli->autocommit(FALSE);  // Turn off auto-committing database modifications
+    public function beginTransaction(): void {
+        $this->_mysqli->begin_transaction();
     }
 
     // Commit a transaction
-    public function commit() {
+    public function commit(): void {
         $this->_mysqli->commit();
-        $this->_mysqli->autocommit(TRUE);   // Turn back on auto-committing
     }
 
     // Roll back a transaction
-    public function rollback() {
+    public function rollback(): void {
         $this->_mysqli->rollback();
-        $this->_mysqli->autocommit(TRUE);   // Turn back on auto-committing
     }
 
-    public function handle() {
+    public function handle(): mysqli {
         return $this->_mysqli;
     }
-    
-	public function lastInsertId()
-	{
-		return $this->_mysqli->insert_id;
-	}
-	
-    public function getError(): string
+
+    public function lastInsertId(): int
     {
-        return $this->_error_string;
+        return $this->_mysqli->insert_id;
     }
 
-    private function handleException(Exception $e): void
+    public function getError(): string
     {
-        $this->_error_string = $e->getMessage();
-        if ($this->_debug) {
-            error_log($e->getMessage());
-            error_log($e->getTraceAsString());
-            throw $e; // Re-throw the exception in debug mode
-        }
+        return $this->errorString;
     }
-	
-	public function getErrorBacktrace()
-	{
-		return $this->_error_backtrace;
-		//return var_dump($e->getTraceAsString());
-	}
-	
-	function debug_string_backtrace()
-	{
-		ob_start();
-		debug_print_backtrace();
-		$trace = ob_get_contents();
-		ob_end_clean();
-	
-		// Remove first item from backtrace as it's this function which
-		// is redundant.
-		$trace = preg_replace ('/^#0\s+' . __FUNCTION__ . "[^\n]*\n/", '', $trace, 1);
-	
-		// Renumber backtrace items.
-		$trace = preg_replace ('/^#(\d+)/me', '\'#\' . ($1 - 1)', $trace);
-	
-		return $trace;
-	}
-	
-	public function killthread()
-	{
-		$this->_mysqli->kill($this->sql_thread_id);
-	}
+
+    private function logError(string $message, string $query = ''): void
+    {
+        $this->errorString = $message;
+        error_log('Database error: ' . $message . ' | Query: ' . $query);
+    }
 }
-?>

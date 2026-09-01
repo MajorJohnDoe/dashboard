@@ -2,6 +2,7 @@
 namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
+use Dashboard\Core\AccessGuard;
 
 class Task {
     private $db;
@@ -184,29 +185,21 @@ class Task {
         return [];
     }
 
-    // Validation methods
+    // Validation methods (delegated to the shared AccessGuard service)
     public function validateTaskOwnership($userId, $taskId) {
-        $sql = "SELECT task.task_id 
-                FROM `tm_task` task 
-                JOIN `tm_board` board ON task.`board_id` = board.`id` 
-                LEFT JOIN `board_shares` bs ON board.`id` = bs.`board_id` AND bs.`user_id` = ?
-                WHERE task.task_id = ? 
-                AND (board.user_id = ? OR bs.`status` = 'accepted')
-                LIMIT 1";
-        $result = $this->db->q($sql, "iii", $userId, $taskId, $userId);
-        return $result !== false && count($result) > 0;
+        return $this->getAccessGuard()->assertTask((int)$userId, (int)$taskId) !== false;
     }
 
     public function validateColumnOwnership($userId, $columnId) {
-        $sql = "SELECT a.*, a.id AS column_id, b.id as board_id FROM `tm_column` a JOIN `tm_board` b ON a.`parent_id` = b.`id` WHERE a.`id` = ? AND b.`user_id` = ? LIMIT 1";
-        $result = $this->db->q($sql, "ii", $columnId, $userId);
-        return $result !== false && count($result) > 0 ? $result : false;
+        return $this->getAccessGuard()->assertColumn((int)$userId, (int)$columnId);
     }
 
     public function validateLabelOwnership($userId, $labelId) {
-        $sql = "SELECT label.id FROM `tm_label` label JOIN `tm_board` board ON label.`board_id` = board.`id` WHERE label.id = ? AND board.user_id = ? LIMIT 1";
-        $result = $this->db->q($sql, "ii", $labelId, $userId);
-        return $result !== false && count($result) > 0;
+        return $this->getAccessGuard()->canAccessLabel((int)$userId, (int)$labelId);
+    }
+
+    private function getAccessGuard(): AccessGuard {
+        return new AccessGuard($this->db);
     }
 
     // Helper methods

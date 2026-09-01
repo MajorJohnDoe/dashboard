@@ -31,13 +31,15 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
         $result = $task->handleCreateTask($_POST);
     
         if ($result['success'] == true) {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, 
-                \Dashboard\Core\HtmxEvents::CLOSE_MODAL => ['modalId' => 'dialog-column-add-task'], 
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
-            ]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+                $result['message'],
+                [
+                    \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                    \Dashboard\Core\HtmxEvents::CLOSE_MODAL => ['modalId' => 'dialog-column-add-task'],
+                ]
+            ));
         } else {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
         }
     }
     
@@ -50,14 +52,16 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
         $result = $task->handleDeleteTask($taskId);
 
         if ($result['success'] == true) {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, 
-                \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true, 
-                \Dashboard\Core\HtmxEvents::REFRESH_TASK_HISTORY => true, 
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
-            ]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+                $result['message'],
+                [
+                    \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                    \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true,
+                    \Dashboard\Core\HtmxEvents::REFRESH_TASK_HISTORY => true,
+                ]
+            ));
         } else {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
         }
     }
 
@@ -68,20 +72,20 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
         $result = $task->handleUpdateTask($_POST);
 
         if ($result['success'] == true) {
-            $triggers = [
-                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, 
-                \Dashboard\Core\HtmxEvents::REFRESH_TASK_HISTORY => true, 
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
-            ];
-
             // Controller decides: task moved to another column -> close modal,
             // otherwise refresh the modal in place.
             $closeEvent = !empty($result['close_modal']) ? \Dashboard\Core\HtmxEvents::CLOSE_MODAL : \Dashboard\Core\HtmxEvents::REFRESH_MODAL;
-            $triggers[$closeEvent] = true;
 
-            triggerResponse($triggers);
+            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+                $result['message'],
+                [
+                    \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                    \Dashboard\Core\HtmxEvents::REFRESH_TASK_HISTORY => true,
+                    $closeEvent => true,
+                ]
+            ));
         } else {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
         }
     }
 ?>

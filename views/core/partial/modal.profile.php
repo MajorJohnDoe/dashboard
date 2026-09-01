@@ -33,9 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($result['success']) {
-        triggerResponse([\Dashboard\Core\HtmxEvents::REFRESH_PROFILE_MODAL => true, \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]], false);
+        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse($result['message'], [\Dashboard\Core\HtmxEvents::REFRESH_PROFILE_MODAL => true]), false);
     } else {
-        triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]], false);
+        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']), false);
     }
 
 }

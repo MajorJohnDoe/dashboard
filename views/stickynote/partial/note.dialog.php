@@ -22,32 +22,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action == 'create') {
         $result = $controller->handleCreateNote();
         if ($result['success']) {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true, 
-                "triggerNoteCatlist" => true,
-                \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-note"],
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Note created successfully']
-            ]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+                $result['message'] ?? 'Note created successfully',
+                [
+                    \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true,
+                    "triggerNoteCatlist" => true,
+                    \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-note"],
+                ]
+            ));
         } else {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create note']
-            ]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Failed to create note'));
         }
     } 
     elseif ($action == 'edit') {
         $result = $controller->handleEditNote();
         
         if ($result['success']) {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::REFRESH_MODAL => true,
-                \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true, 
-                "triggerNoteCatlist" => true,
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Note updated successfully']
-            ]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+                $result['message'] ?? 'Note updated successfully',
+                [
+                    \Dashboard\Core\HtmxEvents::REFRESH_MODAL => true,
+                    \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true,
+                    "triggerNoteCatlist" => true,
+                ]
+            ));
         } else {
-            triggerResponse([
-                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to update note']
-            ]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Failed to update note'));
         }
     }
 }
@@ -60,16 +60,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
     $result = $controller->handleDeleteNote();
     
     if ($result['success']) {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true, 
-            "triggerNoteCatlist" => true,
-            \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-note"], 
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => 'Note deleted successfully']
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+            'Note deleted successfully',
+            [
+                \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true,
+                "triggerNoteCatlist" => true,
+                \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-note"],
+            ]
+        ));
     } else {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to delete note']
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Failed to delete note'));
     }
 }
 

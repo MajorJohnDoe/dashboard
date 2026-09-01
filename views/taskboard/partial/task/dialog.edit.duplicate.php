@@ -21,9 +21,12 @@
         $result = $task->handleDuplicateTask($columnId, $taskId);
 
         if ($result['success'] == true) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true, \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+                $result['message'],
+                [\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true]
+            ));
         } else {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
         }
     }
 ?>

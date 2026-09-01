@@ -2,6 +2,7 @@
 namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
+use Dashboard\Core\AccessGuard;
 
 class Column {
     private $db;
@@ -145,15 +146,7 @@ class Column {
     }
 
     public function verifyOwnership($columnId, $userId) {
-        $sql = "SELECT a.* 
-                FROM `tm_column` a 
-                JOIN `tm_board` b ON a.`parent_id` = b.`id` 
-                LEFT JOIN `board_shares` bs ON b.`id` = bs.`board_id` AND bs.`user_id` = ?
-                WHERE a.`id` = ? 
-                AND (b.`user_id` = ? OR bs.`status` = 'accepted')
-                LIMIT 1";
-        $result = $this->db->q($sql, "iii", $userId, $columnId, $userId);
-        return $result !== false && count($result) > 0;
+        return (new AccessGuard($this->db))->assertColumn((int)$userId, (int)$columnId) !== false;
     }
 
     // Getters

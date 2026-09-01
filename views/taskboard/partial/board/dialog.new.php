@@ -7,16 +7,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = $controller->handleCreateBoard();
 
     if ($result['success']) {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::NEW_BOARD => true,
-            \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
-            \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board-new"],
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+            $result['message'],
+            [
+                \Dashboard\Core\HtmxEvents::NEW_BOARD => true,
+                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board-new"],
+            ]
+        ));
     } else {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
     }
 }
 ?>

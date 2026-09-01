@@ -29,14 +29,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'share') {
     $result = $controller->shareBoard($boardId, $email, $accessLevel);
     
     if ($result['success']) {
-        triggerResponse([
-            "boardMembersUpdate" => true,
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse($result['message'], ["boardMembersUpdate" => true]));
     } else {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
     }
 }
 
@@ -51,14 +46,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $result = $controller->updateBoardAccess($boardId, $userId, $accessLevel);
     
     if ($result['success']) {
-        triggerResponse([
-            "boardMembersUpdate" => true,
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse($result['message'], ["boardMembersUpdate" => true]));
     } else {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
     }
 }
 
@@ -74,14 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         $notifications = new Notifications($db);
         $notifications->deleteBoardInviteNotification($boardId, (int)$userId);
         
-        triggerResponse([
-            "boardMembersUpdate" => true,
-            "notificationsUpdate" => true,
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+            $result['message'],
+            ["boardMembersUpdate" => true, "notificationsUpdate" => true]
+        ));
     } else {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
-        ]);
+        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
     }
 }
