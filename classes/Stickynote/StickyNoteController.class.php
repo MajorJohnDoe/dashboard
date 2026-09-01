@@ -13,10 +13,10 @@ class StickyNoteController {
     private $stickyCategory;
     private $db;
 
-    public function __construct(User $user, StickyNote $stickyNote, StickyCategory $stickyCategory, DatabaseInterface $db) {
+    public function __construct(DatabaseInterface $db, User $user, ?StickyNote $stickyNote = null, ?StickyCategory $stickyCategory = null) {
         $this->user = $user;
-        $this->stickyNote = $stickyNote;
-        $this->stickyCategory = $stickyCategory;
+        $this->stickyNote = $stickyNote ?? new StickyNote($db);
+        $this->stickyCategory = $stickyCategory ?? new StickyCategory($db);
         $this->db = $db;
     }
 
@@ -42,7 +42,7 @@ class StickyNoteController {
             $category_id = ($category_id == 0 ? null : $category_id);
             $title = $_POST['title'] ?? '';
             $content = $_POST['content'] ?? '';
-            $file_path = $this->handleFileUpload();
+            $file_path = null; // File upload not implemented yet
             $is_pinned = isset($_POST['is_pinned']) ? 1 : 0;
 
             $this->db->beginTransaction();
@@ -77,7 +77,7 @@ class StickyNoteController {
             $note_id = $_POST['note_id'] ?? null;
             $title = $_POST['title'] ?? '';
             $content = $_POST['content'] ?? '';
-            $file_path = $this->handleFileUpload();
+            $file_path = null; // File upload not implemented yet
             $is_pinned = isset($_POST['is_pinned']) ? 1 : 0;
 
             if ($note_id) {
@@ -230,15 +230,8 @@ class StickyNoteController {
                 return ['success' => true];
             }
         }
-        return ['success' => false, 'message' => 'Invalid requestssss'];
+        return ['success' => false, 'message' => 'Invalid request'];
     }
-
-    private function handleFileUpload() {
-        // Implement file upload logic here
-        // Return the file path if successful, null otherwise
-        return null;
-    }
-
 
     private function processNoteImages($userId, $noteId, $noteContent) {
         return $this->getImageService()->processAndPersist($userId, $noteId, $noteContent, 'stickynote');

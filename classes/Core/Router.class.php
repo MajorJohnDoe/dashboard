@@ -19,6 +19,45 @@ class Router {
     // Storage for routes
     private $routes = [];
 
+    /** @var array Middleware applied to every route unless overridden per-route */
+    private $defaultMiddleware = [];
+
+    /**
+     * Set middleware that is applied to all registered routes by default.
+     * Per-route middleware arrays are merged on top of these.
+     */
+    public function setDefaultMiddleware(array $middleware): void {
+        $this->defaultMiddleware = $middleware;
+    }
+
+    /**
+     * Register a batch of routes from a module definition array.
+     *
+     * Each entry: ['method(s)', 'path', 'handler', 'type' => 'page'|'partial', 'options' => [...], 'middleware' => [...]]
+     * 'type' defaults to 'page'. 'options'/'middleware' are optional.
+     *
+     * @param array $routeDefinitions
+     */
+    public function addRoutes(array $routeDefinitions): void {
+        foreach ($routeDefinitions as $def) {
+            $method = $def[0] ?? null;
+            $path = $def[1] ?? null;
+            $handler = $def[2] ?? null;
+            if ($method === null || $path === null || $handler === null) {
+                throw new \InvalidArgumentException('Malformed route definition: expected [method, path, handler] tuple.');
+            }
+            $type = $def['type'] ?? 'page';
+            $options = $def['options'] ?? [];
+            $middleware = $def['middleware'] ?? [];
+
+            if ($type === 'partial') {
+                $this->addPartialRoute($method, $path, $handler, $middleware);
+            } else {
+                $this->addRoute($method, $path, $handler, $options, $middleware);
+            }
+        }
+    }
+
     /**
      * Constructor: Initialize the Router with its dependencies
      */
@@ -101,8 +140,8 @@ class Router {
     private function processRoute($route, $params) {
         $_GET = array_merge($_GET, $params);
 
-        // Apply middleware
-        foreach ($route['middleware'] as $middleware) {
+        // Apply middleware (defaults + per-route)
+        foreach (array_merge($this->defaultMiddleware, $route['middleware']) as $middleware) {
             if (!$middleware->handle()) {
                 return;
             }
@@ -168,7 +207,8 @@ class Router {
             error_log("Controller error: " . $e->getMessage());
             header('Content-Type: application/json');
             http_response_code(500);
-            echo json_encode(['error' => $e->getMessage()]);
+            // Never leak internal exception details to the client.
+            echo json_encode(['error' => 'Internal server error']);
         }
     }
 
@@ -240,29 +280,6 @@ class Router {
         }
     
         return $params;
-    }
-
-    /**
-     * Load a view file
-     * 
-     * @param string $viewPath The path to the view file
-     * @param array $params Parameters to be passed to the view
-     * @return string The rendered view content
-     * @throws Exception If the view file is not found
-     */
-    private function loadView($viewPath, $params = []) {
-        $fullPath = $_SERVER['DOCUMENT_ROOT'] . '/views/' . $viewPath . '.php';
-        if (file_exists($fullPath)) {
-            $db = $this->db;
-            $user = $this->user;
-            $_GET = array_merge($_GET, $params);
-            ob_start();
-            require $fullPath;
-            $content = ob_get_clean();
-            return $content;
-        } else {
-            throw new Exception("View file not found: $fullPath");
-        }
     }
 }
 ?>

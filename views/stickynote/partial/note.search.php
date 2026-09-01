@@ -1,7 +1,6 @@
 <?php
-use Dashboard\Stickynote\StickyNoteControllerFactory;
 
-$controller = StickyNoteControllerFactory::create($db, $user);
+$controller = new \Dashboard\Stickynote\StickyNoteController($db, $user);
 
 $search_term = $_GET['search-note'] ?? '';
 $category_id = isset($_GET['category_id']) && $_GET['category_id'] !== '' ? intval($_GET['category_id']) : null;

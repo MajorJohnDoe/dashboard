@@ -1,8 +1,7 @@
 <?php
 // categories.php
-use Dashboard\Stickynote\StickyNoteControllerFactory;
 
-$controller = StickyNoteControllerFactory::create($db, $user);
+$controller = new \Dashboard\Stickynote\StickyNoteController($db, $user);
 // Main page content
 $allCategories = $controller->getCategories();
 
