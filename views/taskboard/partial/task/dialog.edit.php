@@ -97,7 +97,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
      hx-swap="outerHTML"
      >
 
-    <div class="dialog" style="width: 70rem;">
+    <div class="dialog dialog-lg">
         <div class="dialog-header">
             <span>Task</span>
             <button class="close-modal-btn btn">X</button>

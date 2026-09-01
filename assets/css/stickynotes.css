@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    Sticky Notes - design tokens
    ============================================================ */
 :root {
@@ -67,8 +67,8 @@
 }
 
 .sn-content-header input[type="search"]:focus {
-    border-color: #3896c9;
-    box-shadow: 0 0 0 3px color-mix(in oklch, #3896c9 20%, transparent);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent) 20%, transparent);
 }
 
 /* ============================================================
@@ -106,7 +106,7 @@
 }
 
 .sn-category-list a.active {
-    background-color: color-mix(in oklch, #3896c9 12%, white);
+    background-color: color-mix(in oklch, var(--accent) 12%, white);
     font-weight: 600;
 }
 

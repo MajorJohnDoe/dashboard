@@ -5,20 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="<?= \Dashboard\Core\CsrfProtection::getToken() ?>">
     <title><?= $options['title'] ?? 'Hyperboard' ?></title>
+    <?php
+    // Cache-bust with file modification time (stable until a file actually changes,
+    // unlike time() which defeats caching on every request).
+    $assetVersion = fn(string $relPath): string => filemtime(BASE_DIR . $relPath) ?: time();
+    ?>
     <?php foreach ($options['css'] ?? [] as $css): ?>
-        <link type="text/css" href="/assets/css/<?= $css ?>.css?id=<?=time()?>" rel="stylesheet">
+        <link type="text/css" href="/assets/css/<?= $css ?>.css?v=<?= $assetVersion('/assets/css/' . $css . '.css') ?>" rel="stylesheet">
     <?php endforeach; ?>
     <?php foreach ($options['js'] ?? [] as $js): ?>
-        <script src="/assets/js/<?= $js ?>.js"></script>
+        <script src="/assets/js/<?= $js ?>.js?v=<?= $assetVersion('/assets/js/' . $js . '.js') ?>" defer></script>
     <?php endforeach; ?>
     <?php foreach ($options['external_js'] ?? [] as $js): ?>
-        <script src="<?= $js ?>"></script>
+        <script src="<?= $js ?>" defer></script>
     <?php endforeach; ?>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400..700&display=swap" rel="stylesheet">
-    <script src="https://unpkg.com/htmx.org@1.9.11"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.11" defer></script>
 </head>
 
 <body>

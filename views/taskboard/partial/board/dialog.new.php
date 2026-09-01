@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 
 <div id="dialog-board-new" class="modal-container">
-    <div class="dialog" style="width: 30rem; max-width: 90%;">
+    <div class="dialog dialog-sm">
         <div class="dialog-header">
             <span>Create New Board</span>
             <button class="close-modal-btn btn">X</button>

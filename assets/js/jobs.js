@@ -9,14 +9,8 @@ window.getSelectedJobIds = function() {
     return Array.from(checked).map(cb => cb.value);
 };
 
-// Helper to retrieve CSRF token
-window.getJobsCsrfToken = function() {
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta && meta.content) return meta.content;
-    const input = document.querySelector('input[name="csrf_token"]');
-    if (input && input.value) return input.value;
-    return '';
-};
+// CSRF token now comes from the shared Csrf helper in http.js
+window.getJobsCsrfToken = () => Csrf.getToken();
 
 // Batch Action Handlers
 window.handleBatchStatusChange = function() {
@@ -37,7 +31,7 @@ window.handleBatchStatusChange = function() {
     }
 
     if (window.htmx) {
-        window.htmx.ajax('POST', '/jobs/batch', {
+        window.htmx.ajax('POST', APP_ROUTES.JOBS_BATCH, {
             values: {
                 batch_action: 'status',
                 status: normalized,
@@ -58,7 +52,7 @@ window.handleBatchArchive = function() {
     if (!confirm(`Archive ${selectedIds.length} selected application(s)?`)) return;
 
     if (window.htmx) {
-        window.htmx.ajax('POST', '/jobs/batch', {
+        window.htmx.ajax('POST', APP_ROUTES.JOBS_BATCH, {
             values: {
                 batch_action: 'archive',
                 selected_jobs: selectedIds,
@@ -78,7 +72,7 @@ window.handleBatchDelete = function() {
     if (!confirm(`Are you sure you want to permanently delete ${selectedIds.length} selected application(s)?`)) return;
 
     if (window.htmx) {
-        window.htmx.ajax('POST', '/jobs/batch', {
+        window.htmx.ajax('POST', APP_ROUTES.JOBS_BATCH, {
             values: {
                 batch_action: 'delete',
                 selected_jobs: selectedIds,
@@ -90,3 +84,16 @@ window.handleBatchDelete = function() {
         });
     }
 };
+
+// Delegated batch-action handler: buttons use data-batch-action="status|archive|delete"
+// instead of inline onclick attributes (survives HTMX swaps, no global handlers needed).
+document.addEventListener('click', (event) => {
+    const btn = event.target.closest('[data-batch-action]');
+    if (!btn) return;
+
+    switch (btn.dataset.batchAction) {
+        case 'status': window.handleBatchStatusChange(); break;
+        case 'archive': window.handleBatchArchive(); break;
+        case 'delete': window.handleBatchDelete(); break;
+    }
+});

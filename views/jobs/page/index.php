@@ -64,13 +64,13 @@
                 <button class="btn btn-light-gray" type="button" data-deselect-all="jobs-data-table">
                     Deselect All
                 </button>
-                <button class="btn btn-blue" type="button" onclick="window.handleBatchStatusChange()">
+                <button class="btn btn-blue" type="button" data-batch-action="status">
                     Change Status
                 </button>
-                <button class="btn btn-light-gray" type="button" onclick="window.handleBatchArchive()">
+                <button class="btn btn-light-gray" type="button" data-batch-action="archive">
                     Archive
                 </button>
-                <button class="btn btn-red" type="button" onclick="window.handleBatchDelete()">
+                <button class="btn btn-red" type="button" data-batch-action="delete">
                     Delete Selected
                 </button>
             </div>

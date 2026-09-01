@@ -1,6 +1,11 @@
+/**
+ * Notifications JavaScript
+ * Depends on http.js (Csrf, APP_ROUTES) and core.js (HTMX_EVENTS).
+ */
+
 // Check for unread notifications
 function checkUnreadNotifications() {
-    fetch('/notifications/check')
+    fetch(APP_ROUTES.NOTIFICATIONS_CHECK)
         .then(response => response.json())
         .then(data => {
             const notificationBtn = document.querySelector('.notifications-btn');
@@ -15,22 +20,11 @@ function checkUnreadNotifications() {
         .catch(error => console.error('Error checking notifications:', error));
 }
 
-function getCsrfToken() {
-    const panelModal = document.getElementById('panel-modal-notifications');
-    if (panelModal && panelModal.dataset.csrfToken) return panelModal.dataset.csrfToken;
-    
-    // Try from meta tag
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    if (meta) return meta.content;
-    
-    return '';
-}
-
 // Add CSRF token to all HTMX requests for notifications
 document.addEventListener('htmx:configRequest', function(event) {
     const path = event.detail.path;
     if (path && path.includes('/notifications/')) {
-        const csrfToken = getCsrfToken();
+        const csrfToken = Csrf.getToken();
         if (csrfToken) {
             event.detail.headers['X-CSRF-Token'] = csrfToken;
         }
@@ -41,18 +35,22 @@ document.addEventListener('htmx:configRequest', function(event) {
 document.addEventListener('DOMContentLoaded', () => {
     // Initial check
     checkUnreadNotifications();
-    
-    // Check every 30 seconds
-    setInterval(checkUnreadNotifications, 30000);
-    
+
+    // Check every 30 seconds, but only when the tab is visible
+    setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            checkUnreadNotifications();
+        }
+    }, 30000);
+
     // Listen for refreshNotificationsDialog to update the tab count
     document.body.addEventListener(HTMX_EVENTS.REFRESH_NOTIFICATIONS_DIALOG, () => {
-        fetch('/notifications/check')
+        fetch(APP_ROUTES.NOTIFICATIONS_CHECK)
             .then(response => response.json())
             .then(data => {
                 const modal = document.getElementById('panel-modal-notifications');
                 if (!modal) return;
-                
+
                 const unreadTab = modal.querySelector('.panel-modal-tab[data-filter="unread"]');
                 if (unreadTab) {
                     if (data.unread_count > 0) {
@@ -69,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
 document.addEventListener('htmx:afterRequest', (event) => {
     let jsonResponse = null;
     const response = event.detail.xhr.response;
-    
+
     // Only try to parse if response looks like JSON (starts with { or [)
     if (response && typeof response === 'string' && /^[\[{]/.test(response.trim())) {
         try {
@@ -78,34 +76,35 @@ document.addEventListener('htmx:afterRequest', (event) => {
             console.error("Error parsing JSON:", err);
         }
     }
-    
+
     const shouldUpdate = jsonResponse && jsonResponse.notificationsUpdate;
 
+    // Guard pathInfo - it is not present for all htmx:afterRequest events
+    // (e.g. htmx.ajax() calls or certain detail shapes).
+    const requestPath = event.detail.pathInfo?.requestPath || '';
+    const isNotificationPath = requestPath.startsWith(APP_ROUTES.BOARD_SHARE) ||
+        requestPath.startsWith('/notifications');
+
     // Only proceed if we have a valid path that requires notification updates
-    if (shouldUpdate || 
-        event.detail.pathInfo.requestPath.startsWith('/board/share') || 
-        event.detail.pathInfo.requestPath.startsWith('/notifications')) {
-        
+    if (shouldUpdate || isNotificationPath) {
+
         // Update unread count badge
         checkUnreadNotifications();
-        
+
         // If we're in the notifications dialog, refresh the list
         const listContainer = document.getElementById('notifications-list-container');
         const notificationsDialog = document.getElementById('notifications-dialog');
-        
+
         // Only attempt to refresh if both container and dialog exist and are attached to DOM
-        if (listContainer && 
-            notificationsDialog && 
+        if (listContainer &&
+            notificationsDialog &&
             document.body.contains(notificationsDialog)) {
-            
+
             // Prevent multiple simultaneous updates
             if (!listContainer.dataset.updating) {
                 listContainer.dataset.updating = 'true';
-                
-                // Get the inner list container
-                const listElement = listContainer.querySelector('.notifications-list');
-                
-                htmx.ajax('GET', '/notifications/list', {
+
+                htmx.ajax('GET', APP_ROUTES.NOTIFICATIONS_LIST, {
                     target: '.notifications-list',
                     swap: 'innerHTML',
                     headers: {

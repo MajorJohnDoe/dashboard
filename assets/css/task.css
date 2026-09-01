@@ -30,8 +30,8 @@
 }
 
 #taskboard-container ul {
-    background-color: #465561;
-    border: 0.1rem solid #414b55;
+    background-color: var(--surface-card);
+    border: 0.1rem solid var(--border-dark);
     border-top-left-radius: 0.5rem;
     border-bottom-right-radius: 0.5rem;
     border-bottom-left-radius: 0.5rem;
@@ -60,20 +60,20 @@
 }
 
 #taskboard-container .column-icons .icon {
-    background: #465561;
+    background: var(--surface-card);
     padding: 0.1rem 0.4rem;
     border-top-left-radius: 0.3rem;
     border-top-right-radius: 0.3rem;
-    border-top: 0.1rem solid #414b55;
-    border-left: 0.1rem solid #414b55;
-    border-right: 0.1rem solid #414b55;
+    border-top: 0.1rem solid var(--border-dark);
+    border-left: 0.1rem solid var(--border-dark);
+    border-right: 0.1rem solid var(--border-dark);
     margin-left: 5px;
     cursor: pointer;
 }
 
 #taskboard-container .column-icons .icon:hover {
-    background: #3a4751;
-    color: #70ed86;
+    background: var(--surface-raised-active);
+    color: var(--success-bright);
 }
 
 #taskboard-container .column-icons .add-task {
@@ -89,7 +89,7 @@
     margin: 0; 
     box-sizing: border-box;
     scrollbar-width: thin;
-    scrollbar-color: rgb(59 82 103) #232d35; 
+    scrollbar-color: rgb(59 82 103) var(--surface-deeper); 
 }
 
 #taskboard-container .sortable-item { cursor: grab; }
@@ -101,8 +101,8 @@
 }
 
 .tm-task { 
-    background: #2c3842;
-    color: #e5edf8;
+    background: var(--surface-raised);
+    color: var(--text-light);
     position: relative;
     border-left: 0.4rem solid var(--pill-green-bg);
     border-radius: 0.3rem;
@@ -125,7 +125,7 @@
 }
 
 .tm-task:hover { 
-    background: #33414d;
+    background: var(--surface-raised-hover);
     cursor: pointer;
 }
 
@@ -151,7 +151,7 @@
     display: inline-block;
     border-radius: 0.5rem;
     color: rgb(163, 163, 163);
-    background-color: #242e37;
+    background-color: var(--surface-deep);
     width: 3rem;
     height: 1.8rem; 
     display: flex;
@@ -401,7 +401,7 @@
 }
 .tox.tox-tinymce.tox-fullscreen button[data-mce-name="savetask"] {
     width: auto !important;
-    background: #2a956e !important;
+    background: var(--success) !important;
     color: white !important;
     font-weight: 400;
     cursor: pointer !important;
@@ -615,7 +615,7 @@
 }
 
 .create-board-card:hover {
-    border-color: #3896c9;
+    border-color: var(--accent);
     background: #f0f9ff;
 }
 
@@ -643,12 +643,12 @@
 }
 
 .create-board-card:hover .create-board-icon {
-    background: #3896c9;
+    background: var(--accent);
     color: white;
 }
 
 .board-member-avatar.owner {
-    border-color: #3896c9;
+    border-color: var(--accent);
 }
 
 .board-member-count {

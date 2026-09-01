@@ -97,7 +97,7 @@ $csrfToken = CsrfProtection::getToken();
 ?>
 
 <div id="dialog-job-form" class="modal-container">
-    <div class="dialog" style="width: 70rem;">
+    <div class="dialog dialog-lg">
         <div class="dialog-header">
             <span><?= $isEdit ? 'Edit Job Application' : 'Add New Job Application' ?></span>
             <button class="close-modal-btn btn">X</button>

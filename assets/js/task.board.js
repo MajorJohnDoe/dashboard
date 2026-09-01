@@ -3,11 +3,9 @@
  * This file is included in view_taskboard.php and manages taskboard functionality.
  */
 
-// Reads the CSRF token from the global meta tag set in header.php
-function getCsrfTokenMeta() {
-    const meta = document.querySelector('meta[name="csrf-token"]');
-    return meta ? meta.content : '';
-}
+// CSRF token now comes from the shared Csrf helper in http.js
+// (meta tag set in header.php for all pages).
+const getCsrfTokenMeta = () => Csrf.getToken();
 
 // Utility functions
 const Utilities = (() => {
@@ -70,20 +68,9 @@ const SortableManager = (() => {
      * @return {Promise<boolean>} Promise resolving to success status
      */
     function updateColumnOrder(columnIds) {
-        return fetch('/column/save-column-order', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': getCsrfTokenMeta()
-            },
-            body: JSON.stringify({ columnOrders: columnIds })
-        }).then(response =>
-            Utilities.handleFetchResponse(
-                response, 
-                "Column order updated successfully", 
-                "Failed to update column order:"
-            )
-        );
+        return Http.postJson(APP_ROUTES.COLUMN_SAVE_ORDER, { columnOrders: columnIds }, {
+            errorMessage: 'Failed to update column order'
+        }).then(data => data.success === true);
     }
 
     /**
@@ -94,20 +81,9 @@ const SortableManager = (() => {
      * @return {Promise<boolean>} Promise resolving to success status
      */
     function moveTaskToColumn(itemId, newListId, itemIds) {
-        return fetch('/task/move-to-column', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': getCsrfTokenMeta()
-            },
-            body: JSON.stringify({ itemId, newListId, itemIds })
-        }).then(response =>
-            Utilities.handleFetchResponse(
-                response, 
-                "Task moved successfully (JS)", 
-                "Failed to move task:"
-            )
-        );
+        return Http.postJson(APP_ROUTES.TASK_MOVE_TO_COLUMN, { itemId, newListId, itemIds }, {
+            errorMessage: 'Failed to move task'
+        }).then(data => data.success === true);
     }
 
     /**

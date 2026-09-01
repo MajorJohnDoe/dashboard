@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
     hx-target="#dialog-note" 
     hx-swap="outerHTML"
     >
-    <div class="dialog" style="width: 70rem; height: 90%;">
+    <div class="dialog dialog-lg" style="height: 90%;">
         <div class="dialog-header">
             <span>Sticky note</span>
             <button class="close-modal-btn btn">X</button>

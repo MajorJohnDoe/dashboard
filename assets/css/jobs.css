@@ -4,7 +4,7 @@
    ========================================================================== */
 
 main.jobs-main {
-    background: #5a6875;
+    background: var(--surface-page);
     height: 100%;
     overflow: hidden;
 }
@@ -16,7 +16,7 @@ main.jobs-main {
     flex-direction: column;
     padding: clamp(0.8rem, 2vw, 1.25rem) clamp(1rem, 3vw, 1.5rem);
     overflow-y: auto;
-    color: #e5edf8;
+    color: var(--text-light);
 }
 
 /* Header & Stats */
@@ -41,20 +41,20 @@ main.jobs-main {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    color: #d1dfed;
+    color: var(--text-light-dim);
 
     & .stat-badge {
         background: var(--card-bg-color);
-        border: 0.1rem solid #414b55;
+        border: 0.1rem solid var(--border-dark);
         padding: 0.15rem 0.55rem;
         border-radius: 0.3rem;
-        color: #e5edf8;
+        color: var(--text-light);
     }
 
     & .stat-badge.active {
         background: var(--card-color);
-        border-color: #3896c9;
-        color: #79c5ef;
+        border-color: var(--accent);
+        color: var(--accent-light);
     }
 }
 
@@ -67,7 +67,7 @@ main.jobs-main {
 /* Row Checkbox */
 .job-checkbox {
     cursor: pointer;
-    accent-color: #3896c9;
+    accent-color: var(--accent);
     width: 15px;
     height: 15px;
 }
@@ -83,13 +83,13 @@ main.jobs-main {
     width: 28px;
     aspect-ratio: 1;
     border-radius: 0.3rem;
-    background: #242e37;
-    border: 0.1rem solid #414b55;
+    background: var(--surface-deep);
+    border: 0.1rem solid var(--border-dark);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 600;
-    color: #79c5ef;
+    color: var(--accent-light);
     font-size: 0.8rem;
     flex-shrink: 0;
 }
@@ -104,7 +104,7 @@ main.jobs-main {
 
     @media (hover: hover) {
         &:hover {
-            color: #79c5ef;
+            color: var(--accent-light);
             text-decoration: underline;
         }
     }
@@ -113,12 +113,12 @@ main.jobs-main {
 /* Position Title Cell */
 .position-title {
     font-weight: 400;
-    color: #e5edf8;
+    color: var(--text-light);
 }
 
 .position-sub {
     font-size: 0.74rem;
-    color: #8da4be;
+    color: var(--text-light-muted);
     margin-block-start: 0.15rem;
 }
 
@@ -144,7 +144,7 @@ main.jobs-main {
 
 /* Time & Stale Badge */
 .time-badge {
-    color: #8da4be;
+    color: var(--text-light-muted);
     font-size: 0.78rem;
 
     &.stale {

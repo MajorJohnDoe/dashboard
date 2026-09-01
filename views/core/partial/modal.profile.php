@@ -44,6 +44,12 @@ $userPhotoPath = $user->getProfilePhotoPath();
 ?>
 
 <link rel="stylesheet" href="/assets/css/image_cropper.css">
+<?php
+// ImageCropper is only needed in this modal - load it here, not globally.
+// Deferred scripts execute in document order, so http.js/core.js (footer) run first.
+$cropperVersion = filemtime(BASE_DIR . '/assets/js/image.cropper.js') ?: time();
+?>
+<script src="/assets/js/image.cropper.js?v=<?= $cropperVersion ?>" defer></script>
 <div id="modal-profile-settings" 
     class="modal-container" 
     hx-get="/account/settings" 
@@ -51,7 +57,7 @@ $userPhotoPath = $user->getProfilePhotoPath();
     hx-target="#modal-profile-settings" 
     hx-swap="outerHTML"
     >
-    <div class="dialog" style="width: 50rem; height: 50%;">
+    <div class="dialog dialog-md" style="height: 50%;">
         <div class="dialog-header">
             <span>Account settings</span>
             <button class="close-modal-btn btn">X</button>
@@ -103,7 +109,7 @@ $userPhotoPath = $user->getProfilePhotoPath();
                                 // Create cropper modal dynamically
                                 var modalHtml = `
                                     <div id="modal-image-cropper" class="modal-container" style="display: flex;">
-                                        <div class="dialog" style="width: 50rem; max-height: 80vh;">
+                                        <div class="dialog dialog-md" style="max-height: 80vh;">
                                             <div class="dialog-header">
                                                 <span>Crop Profile Photo</span>
                                                 <button class="close-modal-btn btn">X</button>
