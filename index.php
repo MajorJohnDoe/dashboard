@@ -38,7 +38,7 @@ $authMiddleware = new AuthMiddleware($user);
 // -------------------------------------------------------------------------
 
 // Full page routes
-$router->addRoute('GET', '/',               'taskboard/page/index',             ['title' => 'Task Dashboard', 'css' => ['layout'], 'js' => ['notifications'], 'full_page' => true], [$authMiddleware]);
+$router->addRoute('GET', '/',               'taskboard/page/index',             ['title' => 'Task Dashboard', 'css' => ['layout', 'task'], 'js' => ['notifications'], 'full_page' => true], [$authMiddleware]);
 $router->addRoute('GET', '/board',          'taskboard/page/view_taskboard',    ['title' => 'Task Management Board', 'css' => ['layout', 'task'], 'js' => ['task.board', 'notifications'],'external_js' => ['/node_modules/sortablejs/Sortable.min.js', '/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
 $router->addRoute('GET', '/stickynotes',    'stickynote/page/index',            ['title' => 'Sticky Notes', 'css' => ['layout', 'stickynotes'], 'js' => ['notifications'], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
 $router->addRoute('GET', '/jobs',           'jobs/page/index',                  ['title' => 'Job Applications', 'css' => ['layout', 'jobs'], 'js' => ['jobs', 'notifications'], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
