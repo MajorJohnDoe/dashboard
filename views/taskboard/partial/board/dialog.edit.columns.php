@@ -3,7 +3,6 @@ use Dashboard\Taskboard\ColumnController;
     
 // Initialize variables
 $postUrl = '/board/dialog/columns/new';
-$responseTriggers = [];
 
 $controller = new ColumnController($db, $user);
 $activeBoardId = $user->getActiveTaskBoard();
@@ -15,14 +14,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_GET['action'] == 'new') {
 
     if ($result['success']) {
         triggerResponse([
-            "taskBoardColumnList" => true,
+            \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
             "listBoardColumns" => true,
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
         ]);
     } else {
         triggerResponse([
             "listBoardColumns" => true,
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
         ]);
     }
 }
@@ -33,6 +32,7 @@ $boardColumns = $result['success'] ? ($result['columns'] ?? []) : [];
 ?>
 
 <form id="form_addColumn" hx-post="<?=htmlspecialchars($postUrl);?>" hx-target="#list-Columns-edit-board" hx-swap="innerHTML">
+    <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
     <div class="flex-table edit-board-column-list">
         <div class="flex-row">
             <?php if ($boardColumns) : ?>

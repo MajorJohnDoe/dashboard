@@ -3,7 +3,7 @@ namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\User;
-use Dashboard\Core\SharedImageHandler;
+use Dashboard\Core\ItemImageService;
 use Dashboard\Taskboard\ColumnController;
 
 class TaskController {
@@ -88,7 +88,13 @@ class TaskController {
             );
             
             $this->db->commit();
-            return ['success' => true, 'message' => 'Task updated successfully.'];
+            return [
+                'success' => true,
+                'message' => 'Task updated successfully.',
+                // Task was moved to a different column: close the modal instead
+                // of refreshing it in place (view maps this to closeModalEvent).
+                'close_modal' => !empty($validatedData['moveTaskToColumn']),
+            ];
         } catch (\Exception $e) {
             $this->db->rollback();
             error_log("Error updating task: " . $e->getMessage());
@@ -103,16 +109,12 @@ class TaskController {
 
         $this->db->beginTransaction();
         try {
-            // Get the images associated with this task
-            $images = $this->taskModel->getTaskImages($taskId);
-            
+            // Delete the images associated with this task (files + DB rows)
+            $this->getImageService()->deleteAllForItem($this->user->getUserId(), $taskId, 'task');
+
             $result = $this->taskModel->deleteTask($taskId);
             
             if ($result) {
-                // If task deletion was successful, delete the associated images
-                foreach ($images as $image) {
-                    $this->securelyDeleteFile($image['image_path']);
-                }
                 $this->db->commit();
                 return ['success' => true, 'message' => 'Task deleted successfully.'];
             } else {
@@ -214,83 +216,11 @@ class TaskController {
      * Processes task images, handles deletions, and updates task description
      */
     private function processTaskImages($userId, $taskId, $taskDesc) {
-        $imageHandler = new SharedImageHandler($userId, $taskId, $taskDesc, $this->db, 'task');
-        $imageProcessingResult = $imageHandler->processImages();
-        
-        foreach ($imageProcessingResult['toDelete'] as $fileToDelete) {
-            $this->securelyDeleteFile($fileToDelete);
-        }
-        
-        return $imageProcessingResult['newContent'];
+        return $this->getImageService()->processAndPersist($userId, $taskId, $taskDesc, 'task');
     }
 
-    /**
-     * Securely deletes a file after performing various safety checks
-     */
-    private function securelyDeleteFile($filePath) {
-        // Step 1: Validate the file path
-        $fullPath = $this->validateAndSanitizePath($filePath);
-        if ($fullPath === false) {
-            error_log("Invalid file path attempted to be deleted: " . $filePath);
-            return false;
-        }
-
-        // Step 2: Check if the file exists and is within the allowed directory
-        if (!file_exists($fullPath) || !$this->isInAllowedDirectory($fullPath)) {
-            error_log("File does not exist or is not in an allowed directory: " . $fullPath);
-            return false;
-        }
-
-        // Step 3: Ensure the file is owned by the web server process
-        if (!$this->isOwnedByWebServer($fullPath)) {
-            error_log("File is not owned by the web server process: " . $fullPath);
-            return false;
-        }
-
-        // Step 4: Attempt to delete the file
-        if (unlink($fullPath)) {
-            error_log("Successfully deleted file: " . $fullPath);
-            return true;
-        } else {
-            error_log("Failed to delete file: " . $fullPath);
-            return false;
-        }
-    }
-
-    /**
-     * Validates and sanitizes a file path, ensuring it's within the allowed directory
-     */
-    private function validateAndSanitizePath($filePath) {
-        // Remove any null bytes
-        $filePath = str_replace(chr(0), '', $filePath);
-
-        // Resolve the real path, removing any '..' or symbolic links
-        $realPath = realpath(dirname(__DIR__, 2) . $filePath);
-
-        // Check if the path is within the allowed directory
-        $allowedDirectory = realpath(dirname(__DIR__, 2) . '/uploads');
-        if (strpos($realPath, $allowedDirectory) === 0) {
-            return $realPath;
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if a given file path is within the allowed directory
-     */
-    private function isInAllowedDirectory($fullPath) {
-        $allowedDirectory = realpath(dirname(__DIR__, 2) . '/uploads');
-        return strpos($fullPath, $allowedDirectory) === 0;
-    }
-
-    /**
-     * Verifies if the file is owned by the web server process
-     */
-    private function isOwnedByWebServer($fullPath) {
-        $fileOwner = fileowner($fullPath);
-        $serverOwner = posix_getpwuid(posix_geteuid());
-        return $fileOwner === $serverOwner['uid'];
+    private function getImageService(): ItemImageService {
+        return new ItemImageService($this->db);
     }
 
     private function validateTaskData($postData) {
@@ -343,6 +273,28 @@ class TaskController {
 
     public function loadTaskDataById($taskId, $userId) {
         return $this->taskModel->loadTaskDetails($taskId, $userId);
+    }
+
+    /**
+     * Batch-load task data for multiple task IDs (2 queries total instead of 2N).
+     *
+     * @param array $taskIds Task IDs to load
+     * @param int $userId Current user ID for access validation
+     * @return array Map of taskId => ['task' => row, 'labels' => [...], 'completion_rate' => ?int]
+     */
+    public function loadTaskDataByIds(array $taskIds, int $userId): array {
+        $loaded = $this->taskModel->loadTaskDetailsForTasks($taskIds, $userId);
+
+        $result = [];
+        foreach ($loaded as $taskId => $data) {
+            $result[$taskId] = [
+                'task' => $data['task'],
+                'labels' => $data['labels'],
+                'completion_rate' => Task::computeChecklistCompletionRate($data['task']['task_checklist'] ?? null),
+            ];
+        }
+
+        return $result;
     }
 
     public function getTaskLabels() {

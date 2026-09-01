@@ -1,12 +1,21 @@
 <?php
-ini_set('display_errors', 1);
-ini_set('display_startup_errors', 1);
-error_reporting(E_ALL);
 
 // Start output buffering at the very beginning
 ob_start(); 
 
 require_once('autoload.php');
+
+// Debug mode is controlled by _APP_DEBUG in config.php - never display errors on a live site
+if (defined('_APP_DEBUG') && _APP_DEBUG) {
+    ini_set('display_errors', 1);
+    ini_set('display_startup_errors', 1);
+    error_reporting(E_ALL);
+} else {
+    ini_set('display_errors', 0);
+    ini_set('display_startup_errors', 0);
+    error_reporting(E_ALL);
+    ini_set('log_errors', 1);
+}
 
 use Dashboard\Core\Router;
 use Dashboard\Core\Database;
@@ -34,8 +43,8 @@ $router->addRoute('GET', '/board',          'taskboard/page/view_taskboard',    
 $router->addRoute('GET', '/stickynotes',    'stickynote/page/index',            ['title' => 'Sticky Notes', 'css' => ['layout', 'stickynotes'], 'js' => ['notifications'], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
 $router->addRoute('GET', '/jobs',           'jobs/page/index',                  ['title' => 'Job Applications', 'css' => ['layout', 'jobs'], 'js' => ['jobs', 'notifications'], 'external_js' => ['/node_modules/tinymce/tinymce.min.js'], 'full_page' => true], [$authMiddleware]);
 
-// Login/logout route (no authentication middleware)
-$router->addRoute(['GET', 'POST'], '/login', 'core/login', ['title' => 'Login', 'full_page' => false]);
+// Login/logout route (no authentication middleware, CSRF exempt — no session token exists pre-login)
+$router->addRoute(['GET', 'POST'], '/login', 'core/login', ['title' => 'Login', 'full_page' => false, 'csrf' => false]);
 $router->addRoute(['GET', 'POST'], '/logout', 'core/logout', ['title' => 'Login', 'full_page' => false]);
 
 

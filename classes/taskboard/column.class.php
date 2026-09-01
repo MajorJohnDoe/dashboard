@@ -90,6 +90,35 @@ class Column {
         return $results !== false ? $results : [];
     }
 
+    /**
+     * Batch-load column counts for multiple boards in one query.
+     *
+     * @param array $boardIds Board IDs
+     * @return array Map of boardId => column count
+     */
+    public function getColumnCountsForBoards(array $boardIds): array {
+        $boardIds = array_values(array_filter(array_map('intval', $boardIds)));
+        if (empty($boardIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($boardIds), '?'));
+        $sql = "SELECT `parent_id`, COUNT(*) AS column_count
+                FROM `tm_column`
+                WHERE `parent_id` IN ($placeholders)
+                GROUP BY `parent_id`";
+        $results = $this->db->q($sql, str_repeat('i', count($boardIds)), ...$boardIds);
+
+        $counts = array_fill_keys($boardIds, 0);
+        if ($results) {
+            foreach ($results as $row) {
+                $counts[(int) $row['parent_id']] = (int) $row['column_count'];
+            }
+        }
+
+        return $counts;
+    }
+
     public function getTasksForColumn($columnId, $taskOrder = null, $displayMaxTasks = 2) {
         $arrDisplayTaskLimit = [
             0 => '15', 1 => '25', 2 => '35', 3 => '50', 4 => '80',
@@ -115,12 +144,6 @@ class Column {
         return $results !== false ? $results : [];
     }
 
-    public function changeColumnName($newColumnName) {
-        $sql = "UPDATE `tm_column` SET `column_name` = ? WHERE `id` = ?";
-        $result = $this->db->q($sql, "si", $newColumnName, $this->columnId);
-        return $result !== false;
-    }
-
     public function verifyOwnership($columnId, $userId) {
         $sql = "SELECT a.* 
                 FROM `tm_column` a 
@@ -134,9 +157,6 @@ class Column {
     }
 
     // Getters
-    public function getColumnName() { return $this->columnName; }
     public function getColumnFlag() { return $this->columnFlag; }
-    public function getColumnOrderBy() { return $this->columnOrderBy; }
-    public function getColumnDisplayLimit() { return $this->columnTaskDisplayLimit; }
 }
 ?>

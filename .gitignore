@@ -19,4 +19,6 @@ user_upload_temp/*
 !user_upload_temp/.gitkeep
 AGENTS.md
 
+# Ignore skills
 .github/
+docs/

@@ -127,6 +127,16 @@ class ColumnController {
         return ['success' => true, 'columns' => $columns];
     }
 
+    /**
+     * Batch-load column counts for multiple boards (single grouped query).
+     *
+     * @param array $boardIds Board IDs
+     * @return array Map of boardId => column count
+     */
+    public function getColumnCountsForBoards(array $boardIds): array {
+        return $this->column->getColumnCountsForBoards($boardIds);
+    }
+
     public function getTasksForColumn($columnId, $taskOrder = null, $displayMaxTasks = 2) {
         // Get the board ID for this column
         $sql = "SELECT parent_id FROM tm_column WHERE id = ? LIMIT 1";
@@ -142,14 +152,6 @@ class ColumnController {
 
         $tasks = $this->column->getTasksForColumn($columnId, $taskOrder, $displayMaxTasks);
         return ['success' => true, 'tasks' => $tasks];
-    }
-
-    public function changeColumnName($columnId, $newColumnName) {
-        if (!$this->verifyColumnOwnership($columnId)) {
-            return ['success' => false, 'error' => 'Column does not belong to the user.'];
-        }
-        $result = $this->column->changeColumnName($newColumnName);
-        return $result ? ['success' => true, 'message' => 'Column name changed successfully.'] : ['success' => false, 'error' => 'Failed to change column name.'];
     }
 
     private function verifyBoardViewAccess($boardId) {

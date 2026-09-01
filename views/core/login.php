@@ -3,6 +3,7 @@
 use Dashboard\Core\Database;
 use Dashboard\Core\SecureSession;
 use Dashboard\Core\User;
+use Dashboard\Core\CsrfProtection;
 
 // These variables should be available from the router
 /** @var Database $db */
@@ -27,6 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
     error_log("Login attempt for username: " . $username);
 
     if ($user->login($username, $password, $persistent)) {
+        // Rotate the CSRF token on privilege change (prevents session fixation reuse)
+        CsrfProtection::regenerate();
         error_log("Login successful, redirecting to home page");
         header('Location: /');
         exit;

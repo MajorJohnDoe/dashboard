@@ -202,13 +202,13 @@ class BoardController
 
         if ($response['success']) {
             triggerResponse([
-                "newBoard" => true, 
-                "taskBoardColumnList" => true,
-                'globalMessagePopupUpdate' => ['type' => 'success', 'message' => $response['message']]
+                \Dashboard\Core\HtmxEvents::NEW_BOARD => true, 
+                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $response['message']]
             ], false);
         } else {
             triggerResponse([
-                "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $response['message']]
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $response['message']]
             ], false);
         }
 
@@ -220,8 +220,8 @@ class BoardController
     public function handleCreateBoard()
     {
         $boardName = $_POST['boardName'] ?? '';
-        if (empty($boardName)) {
-            return ['success' => false, 'message' => 'Board title cannot be empty'];
+        if (!$this->validateBoardName($boardName)) {
+            return ['success' => false, 'message' => 'Board title must be at least 4 characters.'];
         }
 
         if($this->board->nbrBoards($this->user->getUserId()) >= _TASKBOARD_MAXIMUM_BOARDS){
@@ -244,8 +244,8 @@ class BoardController
             return ['success' => false, 'message' => 'Board ownership error.'];
         }
 
-        if (empty($boardTitle)) {
-            return ['success' => false, 'message' => 'Board title cannot be empty'];
+        if (!$this->validateBoardName($boardTitle)) {
+            return ['success' => false, 'message' => 'Board title must be at least 4 characters.'];
         }
 
         $result = $this->board->updateBoard($boardId, $boardTitle);
@@ -411,6 +411,46 @@ class BoardController
         }
         
         return $members;
+    }
+
+    /**
+     * Batch-load board members (owner + accepted shared users) for multiple boards.
+     * Two queries total instead of 2N.
+     *
+     * @param array $boardIds Board IDs
+     * @return array Map of boardId => list of ['user_id' => int, 'is_owner' => bool]
+     */
+    public function getBoardMembersWithAvatarsForBoards(array $boardIds): array
+    {
+        $boardIds = array_values(array_filter(array_map('intval', $boardIds)));
+        if (empty($boardIds)) {
+            return [];
+        }
+
+        $owners = $this->board->getBoardOwnersForBoards($boardIds);
+        $sharedUsers = $this->board->getBoardUsersForBoards($boardIds);
+
+        $membersByBoard = [];
+        foreach ($boardIds as $boardId) {
+            $members = [];
+            $addedUserIds = [];
+
+            if (isset($owners[$boardId])) {
+                $members[] = ['user_id' => $owners[$boardId], 'is_owner' => true];
+                $addedUserIds[] = $owners[$boardId];
+            }
+
+            foreach ($sharedUsers[$boardId] ?? [] as $sharedUser) {
+                if (!in_array($sharedUser['user_id'], $addedUserIds, true)) {
+                    $members[] = ['user_id' => $sharedUser['user_id'], 'is_owner' => false];
+                    $addedUserIds[] = $sharedUser['user_id'];
+                }
+            }
+
+            $membersByBoard[$boardId] = $members;
+        }
+
+        return $membersByBoard;
     }
 
     // Retrieves the board's ID

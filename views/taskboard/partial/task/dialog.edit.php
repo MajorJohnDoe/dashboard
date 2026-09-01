@@ -15,7 +15,6 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
         $result = $task->handleGetTaskDetails($_GET['task_id']);
         if ($result['success']) {
             $taskData = $result['task'];
-            $taskID = $taskData['id'];
             $taskTitle = $taskData['title'];
             $taskDescription = $taskData['description'];
             $taskChecklist = $taskData['checklist'];
@@ -33,12 +32,12 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
     
         if ($result['success'] == true) {
             triggerResponse([
-                "taskBoardColumnList" => true, 
-                "closeModalEvent" => ['modalId' => 'dialog-column-add-task'], 
-                "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, 
+                \Dashboard\Core\HtmxEvents::CLOSE_MODAL => ['modalId' => 'dialog-column-add-task'], 
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
             ]);
         } else {
-            triggerResponse(["globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
         }
     }
     
@@ -52,13 +51,13 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
 
         if ($result['success'] == true) {
             triggerResponse([
-                "taskBoardColumnList" => true, 
-                "closeModalEvent" => true, 
-                "refreshTaskHistory" => true, 
-                "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, 
+                \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true, 
+                \Dashboard\Core\HtmxEvents::REFRESH_TASK_HISTORY => true, 
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
             ]);
         } else {
-            triggerResponse(["globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
         }
     }
 
@@ -70,20 +69,19 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
 
         if ($result['success'] == true) {
             $triggers = [
-                "taskBoardColumnList" => true, 
-                "refreshTaskHistory" => true, 
-                "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, 
+                \Dashboard\Core\HtmxEvents::REFRESH_TASK_HISTORY => true, 
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
             ];
 
-            if (isset($_POST['move_task_column_id']) && $_POST['move_task_column_id'] != '0') {
-                $triggers["closeModalEvent"] = true;
-            } else {
-                $triggers["refreshModal"] = true;
-            }
+            // Controller decides: task moved to another column -> close modal,
+            // otherwise refresh the modal in place.
+            $closeEvent = !empty($result['close_modal']) ? \Dashboard\Core\HtmxEvents::CLOSE_MODAL : \Dashboard\Core\HtmxEvents::REFRESH_MODAL;
+            $triggers[$closeEvent] = true;
 
             triggerResponse($triggers);
         } else {
-            triggerResponse(["globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
         }
     }
 ?>
@@ -102,7 +100,8 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
         </div>
         <div class="formOuter">
             <!-- end of modal header -->
-            <form id="form_addTask" method="POST" hx-post="<?=$post_url?>" hx-target="#dialog-column-add-task .formOuter" hx-swap="beforeend">
+            <form id="form_addTask" method="POST" hx-post="<?=($post_url ?? '')?>" hx-target="#dialog-column-add-task .formOuter" hx-swap="beforeend">
+                <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                 <?php
                     // Message to user that task has a resolved date from moving task to a column that has a resolve flag.
                     // Resolve flag on a column sets task task_resolved_date, kinda like a archived task
@@ -111,7 +110,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                         $taskColumns = $taskColumn->getColumnsForBoard($user->getActiveTaskBoard());
 
                             echo '
-                            <div class="flex-table nice-form-group" style="background: #c6e1c3; border-radius: 0.5rem; margin: 10px 10px 10px 10px;">
+                            <div class="flex-table nice-form-group task-resolved-banner">
                                 <div class="flex-row">
                                     <div class="flex-cell flex-vertical-center flex-cell-shrink">
                                         <label for="task_title">Move task back to a column:</label>
@@ -138,7 +137,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                     }
                 ?>
                 <div class="nice-form-group">
-                    <div class="task-edit-grid">
+                    <div class="edit-grid">
                         <!-- Left Column -->
                         <div class="left-column">
                             <div class="flex-table">
@@ -184,7 +183,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                 <div class="flex-row">
                                     <div class="flex-cell">
                                         <label for="task_desc">Task description:</label><br>
-                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor" style="height: 0rem; width: 100%; position: absolute; visibility: hidden;" aria-hidden="true"><?=(isset($taskDescription) ? htmlspecialchars($taskDescription, ENT_QUOTES, 'UTF-8') : '')?></textarea>
+                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?=(isset($taskDescription) ? htmlspecialchars($taskDescription, ENT_QUOTES, 'UTF-8') : '')?></textarea>
                                     </div>
                                 </div>
                                 <div class="flex-row task_checklist"></div>
@@ -208,8 +207,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                     <div class="flex-cell">
                                         <span class="form-label">Add to task</span>
                                         <!-- Labels Button -->
-                                        <button class="btn btn-dark-gray" 
-                                                style="margin: 0.5rem 0 0 0; width: 100%;" 
+                                        <button class="btn btn-dark-gray btn-block" 
                                                 hx-get="/label/edit"
                                                 hx-target="body" 
                                                 hx-swap="beforeend"
@@ -218,8 +216,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                         </button>
                                         <!-- Checklist Button -->
                                         <button type="button" 
-                                                class="btn btn-dark-gray" 
-                                                style="margin: 0.5rem 0 0 0; width: 100%;" 
+                                                class="btn btn-dark-gray btn-block" 
                                                 hx-get="/task/checklist/new/0"
                                                 hx-target="#dialog-column-add-task .task_checklist" 
                                                 hx-swap="innerHTML" 
@@ -232,31 +229,31 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                 <div class="flex-row">
                                     <div class="flex-cell">
                                         <span class="form-label">Priority</span>
-                                        <div class="task-priority-container">
+                                        <div class="pill-select">
                                             <!-- Lowest Priority -->
-                                            <input type="radio" id="priority-lowest" name="task_priority" value="0" class="task-priority-input"
+                                            <input type="radio" id="priority-lowest" name="task_priority" value="0"
                                                 <?= !isset($taskPriority) || $taskPriority == "0" ? 'checked' : '' ?>>
-                                            <label for="priority-lowest" class="task-priority-label priority-lowest">Lowest</label>
-                                            
+                                            <label for="priority-lowest" class="pill-select-label priority-lowest">Lowest</label>
+
                                             <!-- Low Priority -->
-                                            <input type="radio" id="priority-low" name="task_priority" value="1" class="task-priority-input"
+                                            <input type="radio" id="priority-low" name="task_priority" value="1"
                                                 <?= isset($taskPriority) && $taskPriority == "1" ? 'checked' : '' ?>>
-                                            <label for="priority-low" class="task-priority-label priority-low">Low</label>
-                                            
+                                            <label for="priority-low" class="pill-select-label priority-low">Low</label>
+
                                             <!-- Alarming Priority -->
-                                            <input type="radio" id="priority-alarming" name="task_priority" value="2" class="task-priority-input"
+                                            <input type="radio" id="priority-alarming" name="task_priority" value="2"
                                                 <?= isset($taskPriority) && $taskPriority == "2" ? 'checked' : '' ?>>
-                                            <label for="priority-alarming" class="task-priority-label priority-alarming">Alarming</label>
-                                            
+                                            <label for="priority-alarming" class="pill-select-label priority-alarming">Alarming</label>
+
                                             <!-- Critical Priority -->
-                                            <input type="radio" id="priority-critical" name="task_priority" value="3" class="task-priority-input"
+                                            <input type="radio" id="priority-critical" name="task_priority" value="3"
                                                 <?= isset($taskPriority) && $taskPriority == "3" ? 'checked' : '' ?>>
-                                            <label for="priority-critical" class="task-priority-label priority-critical">Critical</label>
-                                            
+                                            <label for="priority-critical" class="pill-select-label priority-critical">Critical</label>
+
                                             <!-- Highest Priority -->
-                                            <input type="radio" id="priority-highest" name="task_priority" value="4" class="task-priority-input"
+                                            <input type="radio" id="priority-highest" name="task_priority" value="4"
                                                 <?= isset($taskPriority) && $taskPriority == "4" ? 'checked' : '' ?>>
-                                            <label for="priority-highest" class="task-priority-label priority-highest">Highest</label>
+                                            <label for="priority-highest" class="pill-select-label priority-highest">Highest</label>
                                         </div>
                                     </div>
                                 </div>
@@ -265,8 +262,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                         <span class="form-label">Actions</span><br>
                                         <!-- Duplicate task Button -->
                                         <div style="position: relative;">
-                                            <button class="btn btn-dark-gray" 
-                                                    style="margin: 0.5rem 0 0 0; width: 100%;" 
+                                            <button class="btn btn-dark-gray btn-block" 
                                                     id="duplicate-task-btn"
                                                     hx-get="/task/duplicate/dupe/<?=(isset($_GET['task_id']) ? $_GET['task_id'] : '')?>"
                                                     hx-target="#duplicate-task-box" 

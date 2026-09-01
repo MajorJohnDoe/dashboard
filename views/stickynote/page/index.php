@@ -13,10 +13,8 @@ $category_id = isset($_GET['category_id']) ? (
                 <h3>Quick links:</h3>
                 <ul class="sn-category-list">
                     <li><a href="/stickynotes">Recent</a></li>
-                    <li><a href="stickynotes/bookmarks">Bookmarks</a></li>
                 </ul>
 
-                <br>
                 <h3>Library:</h3>
                 <ul class="sn-category-list"
                     id="note-category-list-container"
@@ -26,7 +24,6 @@ $category_id = isset($_GET['category_id']) ? (
                     hx-swap="innerHTML">
                 </ul>
 
-                <br>
                 <button class="open-modal-btn btn btn-fullwidth btn-green"
                         hx-get="/stickynotes/category/dialog/" 
                         hx-target="body" 

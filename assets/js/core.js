@@ -1,5 +1,22 @@
 // Core JavaScript File
 
+// HTMX event names - must mirror \Dashboard\Core\HtmxEvents (classes/Core/HtmxEvents.class.php)
+const HTMX_EVENTS = Object.freeze({
+    TASK_BOARD_COLUMN_LIST: 'taskBoardColumnList',
+    CLOSE_MODAL: 'closeModalEvent',
+    CLOSE_SPECIFIC_MODAL: 'closeSpecificModalEvent',
+    REFRESH_MODAL: 'refreshModal',
+    REFRESH_TASK_HISTORY: 'refreshTaskHistory',
+    GLOBAL_MESSAGE: 'globalMessagePopupUpdate',
+    TRIGGER_NOTELIST: 'triggerNotelist',
+    TRIGGER_LABEL_FORM: 'triggerLabelForm',
+    SEARCH_LABEL_EDIT: 'search-label-edit',
+    REFRESH_PROFILE_MODAL: 'refreshProfileModal',
+    NOTIFICATIONS_UPDATE: 'notificationsUpdate',
+    REFRESH_NOTIFICATIONS_DIALOG: 'refreshNotificationsDialog',
+    NEW_BOARD: 'newBoard',
+});
+
 // Modal Management System
 const ModalManager = (() => {
     let activeModalId = null;
@@ -69,7 +86,7 @@ const ModalManager = (() => {
 
         document.addEventListener('mousedown', handleOutsideClick);
 
-        document.body.addEventListener('closeModalEvent', (event) => {
+        document.body.addEventListener(HTMX_EVENTS.CLOSE_MODAL, (event) => {
             const detail = event.detail;
             if (detail && detail.modalId) {
                 const modal = document.getElementById(detail.modalId);
@@ -86,7 +103,7 @@ const ModalManager = (() => {
             }
         });
 
-        document.body.addEventListener('closeSpecificModalEvent', (event) => {
+        document.body.addEventListener(HTMX_EVENTS.CLOSE_SPECIFIC_MODAL, (event) => {
             let modalIds = event.detail && Array.isArray(event.detail.value) ? event.detail.value : [];
             modalIds.forEach(modalId => {
                 const modal = document.getElementById(modalId);
@@ -317,7 +334,7 @@ const GlobalMessagePopup = (() => {
     }
 
     function init() {
-        document.body.addEventListener('globalMessagePopupUpdate', handleGlobalMessagePopupUpdate);
+        document.body.addEventListener(HTMX_EVENTS.GLOBAL_MESSAGE, handleGlobalMessagePopupUpdate);
     }
 
     return { init };
@@ -360,9 +377,9 @@ const TinyMCEManager = (() => {
             relative_urls: false,
             height: 300,
             plugins: 'autolink lists link image charmap preview anchor searchreplace visualblocks code fullscreen insertdatetime media table code help image',
-            toolbar: 'undo redo | styles | formatselect | bold italic backcolor | alignleft aligncenter alignright | bullist numlist outdent indent | removeformat | image | fullscreen | savetask',
+            toolbar: 'undo redo | styles | bold italic backcolor | alignleft aligncenter alignright | bullist numlist outdent indent | removeformat | image | fullscreen | savetask',
             menubar: false,
-            toolbar_mode: 'false',
+            toolbar_mode: 'sliding',
             statusbar: false,
             content_style: 'body { font-size: ' + mceFontSize + ';  }',
             setup: (editor) => {
@@ -723,6 +740,7 @@ class ImageCropper {
             const formData = new FormData();
             formData.append('action', 'update_photo');
             formData.append('profile_photo', blob, 'profile.jpg');
+            formData.append('csrf_token', getCsrfToken());
 
             fetch('/account/settings', {
                 method: 'POST',
@@ -746,12 +764,12 @@ class ImageCropper {
                     if (cropperModal) {
                         cropperModal.remove();
                     }
-                    document.body.dispatchEvent(new Event('refreshProfileModal'));
+                    document.body.dispatchEvent(new Event(HTMX_EVENTS.REFRESH_PROFILE_MODAL));
                     const headerImg = document.getElementById('header-profile-img');
                     if (headerImg) {
                         headerImg.src = headerImg.src.split('?')[0] + '?t=' + Date.now();
                     }
-                    document.body.dispatchEvent(new CustomEvent('globalMessagePopupUpdate', {
+                    document.body.dispatchEvent(new CustomEvent(HTMX_EVENTS.GLOBAL_MESSAGE, {
                         detail: { type: 'success', message: 'Profile photo updated successfully' }
                     }));
                 } else {
@@ -988,7 +1006,7 @@ const PanelModalManager = (() => {
             }).then(response => {
                 console.log('Mark as read response:', response.status);
                 // Trigger refresh
-                document.body.dispatchEvent(new CustomEvent('notificationsUpdate'));
+                document.body.dispatchEvent(new CustomEvent(HTMX_EVENTS.NOTIFICATIONS_UPDATE));
             }).catch(err => {
                 console.error('Error marking as read:', err);
             });
@@ -1195,6 +1213,14 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('[data-panel-modal]').forEach(el => {
             htmx.process(el);
         });
+    }
+});
+
+// Attach CSRF token to every HTMX request globally (from meta tag)
+document.body.addEventListener('htmx:configRequest', (event) => {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) {
+        event.detail.headers['X-CSRF-Token'] = meta.content;
     }
 });
 

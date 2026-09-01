@@ -84,8 +84,7 @@ class NotificationsController
      */
     public function markRead()
     {
-        CsrfProtection::validateOrFail($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-
+        // CSRF is enforced centrally by CsrfMiddleware via the Router
         $notificationId = $_POST['notification_id'] ?? null;
         if (!$notificationId) {
             triggerResponse([
@@ -114,8 +113,7 @@ class NotificationsController
      */
     public function markAllRead()
     {
-        CsrfProtection::validateOrFail($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-
+        // CSRF is enforced centrally by CsrfMiddleware via the Router
         $result = $this->notifications->markAllAsRead($this->user->getUserId());
 
         if ($result) {
@@ -137,19 +135,13 @@ class NotificationsController
     public function delete()
     {
         $deleteData = [];
-        $csrfToken = null;
         
-        // Get CSRF token from POST, GET (query string), or headers
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $csrfToken = $_POST['csrf_token'] ?? null;
-        } elseif ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
-            // For DELETE requests, parse the body
+        // For DELETE requests, parse the body to get the notification ID
+        if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
             parse_str(file_get_contents("php://input"), $deleteData);
-            $csrfToken = $deleteData['csrf_token'] ?? null;
         }
         
-        CsrfProtection::validateOrFail($csrfToken);
-
+        // CSRF is enforced centrally by CsrfMiddleware via the Router
         $notificationId = $_POST['notification_id'] ?? ($deleteData['notification_id'] ?? null);
         $result = $this->notifications->deleteNotification($notificationId, $this->user->getUserId());
 
@@ -171,8 +163,7 @@ class NotificationsController
      */
     public function accept()
     {
-        CsrfProtection::validateOrFail($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-
+        // CSRF is enforced centrally by CsrfMiddleware via the Router
         $boardId = $_POST['board_id'] ?? null;
         if (!$boardId) {
             triggerResponse([
@@ -191,8 +182,7 @@ class NotificationsController
      */
     public function decline()
     {
-        CsrfProtection::validateOrFail($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-
+        // CSRF is enforced centrally by CsrfMiddleware via the Router
         $boardId = $_POST['board_id'] ?? null;
         if (!$boardId) {
             triggerResponse([
@@ -262,15 +252,15 @@ class NotificationsController
     {
         if ($response['success']) {
             triggerResponse([
-                "notificationsUpdate" => true,
-                "globalMessagePopupUpdate" => [
+                HtmxEvents::NOTIFICATIONS_UPDATE => true,
+                HtmxEvents::GLOBAL_MESSAGE => [
                     'type' => 'success',
                     'message' => $response['message']
                 ]
             ]);
         } else {
             triggerResponse([
-                "globalMessagePopupUpdate" => [
+                HtmxEvents::GLOBAL_MESSAGE => [
                     'type' => 'error',
                     'message' => $response['message']
                 ]

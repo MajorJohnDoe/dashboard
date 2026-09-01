@@ -2,6 +2,7 @@
 namespace Dashboard\Jobs;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
+use Dashboard\Core\ItemImageService;
 
 class JobApplication {
     private DatabaseInterface $db;
@@ -31,6 +32,10 @@ class JobApplication {
 
     public function __construct(DatabaseInterface $db) {
         $this->db = $db;
+    }
+
+    private function getImageService(): ItemImageService {
+        return new ItemImageService($this->db);
     }
 
     /**
@@ -64,26 +69,57 @@ class JobApplication {
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), NOW()
                   )";
 
-        $result = $this->db->q(
-            $query,
-            "isssssssisssss",
-            $userId,
-            $company,
-            $position,
-            $department,
-            $status,
-            $jobType,
-            $workModel,
-            $interestLevel,
-            $matchScore,
-            $source,
-            $salaryRange,
-            $notes,
-            $appliedDate,
-            $deadlineDate
-        );
+        $this->db->beginTransaction();
+        try {
+            $result = $this->db->q(
+                $query,
+                "isssssssisssss",
+                $userId,
+                $company,
+                $position,
+                $department,
+                $status,
+                $jobType,
+                $workModel,
+                $interestLevel,
+                $matchScore,
+                $source,
+                $salaryRange,
+                $notes,
+                $appliedDate,
+                $deadlineDate
+            );
 
-        return $result ? (int)$this->db->lastInsertId() : false;
+            if ($result === false) {
+                throw new \RuntimeException('Failed to insert job application.');
+            }
+
+            $jobId = (int)$this->db->lastInsertId();
+
+            // Convert pasted base64 images to files and persist the rewritten notes
+            if ($notes !== null) {
+                $processedNotes = $this->getImageService()->processAndPersist($userId, $jobId, $notes, 'job');
+                if ($processedNotes !== $notes) {
+                    $updateResult = $this->db->q(
+                        "UPDATE job_applications SET notes = ? WHERE id = ? AND user_id = ?",
+                        "sii",
+                        $processedNotes,
+                        $jobId,
+                        $userId
+                    );
+                    if ($updateResult === false) {
+                        throw new \RuntimeException('Failed to update notes after image processing.');
+                    }
+                }
+            }
+
+            $this->db->commit();
+            return $jobId;
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            error_log("Error creating job application: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -131,36 +167,69 @@ class JobApplication {
                     {$statusUpdateClause}
                   WHERE id = ? AND user_id = ?";
 
-        $result = $this->db->q(
-            $query,
-            "sssssssisssssii",
-            $company,
-            $position,
-            $department,
-            $status,
-            $jobType,
-            $workModel,
-            $interestLevel,
-            $matchScore,
-            $source,
-            $salaryRange,
-            $notes,
-            $appliedDate,
-            $deadlineDate,
-            $id,
-            $userId
-        );
+        $this->db->beginTransaction();
+        try {
+            // Convert pasted base64 images to files and remove orphaned ones before persisting
+            if ($notes !== null) {
+                $notes = $this->getImageService()->processAndPersist($userId, $id, $notes, 'job');
+            }
 
-        return $result !== false;
+            $result = $this->db->q(
+                $query,
+                "sssssssisssssii",
+                $company,
+                $position,
+                $department,
+                $status,
+                $jobType,
+                $workModel,
+                $interestLevel,
+                $matchScore,
+                $source,
+                $salaryRange,
+                $notes,
+                $appliedDate,
+                $deadlineDate,
+                $id,
+                $userId
+            );
+
+            if ($result === false) {
+                throw new \RuntimeException('Failed to update job application.');
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            error_log("Error updating job application: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
      * Delete a single job application
      */
     public function delete(int $id, int $userId): bool {
-        $query = "DELETE FROM job_applications WHERE id = ? AND user_id = ?";
-        $result = $this->db->q($query, "ii", $id, $userId);
-        return $result !== false;
+        $this->db->beginTransaction();
+        try {
+            // Remove embedded images (files + shared_item_images rows) before deleting the row
+            $this->getImageService()->deleteAllForItem($userId, $id, 'job');
+
+            $query = "DELETE FROM job_applications WHERE id = ? AND user_id = ?";
+            $result = $this->db->q($query, "ii", $id, $userId);
+
+            if ($result === false) {
+                throw new \RuntimeException('Failed to delete job application.');
+            }
+
+            $this->db->commit();
+            return true;
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            error_log("Error deleting job application: " . $e->getMessage());
+            return false;
+        }
     }
 
     /**
@@ -176,10 +245,25 @@ class JobApplication {
         $types = str_repeat('i', count($cleanIds)) . 'i';
         $params = array_merge($cleanIds, [$userId]);
 
-        $query = "DELETE FROM job_applications WHERE id IN ($placeholders) AND user_id = ?";
-        $result = $this->db->q($query, $types, ...$params);
+        $this->db->beginTransaction();
+        try {
+            // Remove embedded images (files + shared_item_images rows) before deleting the rows
+            $this->getImageService()->deleteAllForItems($userId, $cleanIds, 'job');
 
-        return is_numeric($result) ? (int)$result : 0;
+            $query = "DELETE FROM job_applications WHERE id IN ($placeholders) AND user_id = ?";
+            $result = $this->db->q($query, $types, ...$params);
+
+            if ($result === false) {
+                throw new \RuntimeException('Failed to batch delete job applications.');
+            }
+
+            $this->db->commit();
+            return is_numeric($result) ? (int)$result : 0;
+        } catch (\Exception $e) {
+            $this->db->rollback();
+            error_log("Error batch deleting job applications: " . $e->getMessage());
+            return 0;
+        }
     }
 
     /**

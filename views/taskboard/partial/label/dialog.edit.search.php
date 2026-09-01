@@ -2,14 +2,15 @@
 use Dashboard\Taskboard\BoardController;
 
 $board = new BoardController($db, $user);
-$boardData = $board->loadBoardDataById($user->getActiveTaskBoard(), $user->user_id());
 
-if($boardData) {
-    $boardLabels = $board->loadBoardLabels($user->getActiveTaskBoard());
-}
-/* var_dump($boardLabels); */
 // Determine if search label is set
 $searchLabelSet = isset($_GET['search-label-edit']) && strlen($_GET['search-label-edit']) > 0;
+
+// Only load all labels when no search term is present (search path uses searchBoardLabels)
+$boardLabels = [];
+if (!$searchLabelSet) {
+    $boardLabels = $board->loadBoardLabels($user->getActiveTaskBoard());
+}
 
 echo '<div class="flex-table">';
 

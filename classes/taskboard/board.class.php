@@ -130,6 +130,62 @@ class Board
         return $this->db->q($sql, "i", $boardId);
     }
 
+    /**
+     * Batch-load board owners for multiple boards in one query.
+     *
+     * @param array $boardIds Board IDs
+     * @return array Map of boardId => user_id (owner)
+     */
+    public function getBoardOwnersForBoards(array $boardIds): array
+    {
+        $boardIds = array_values(array_filter(array_map('intval', $boardIds)));
+        if (empty($boardIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($boardIds), '?'));
+        $sql = "SELECT `id`, `user_id` FROM `tm_board` WHERE `id` IN ($placeholders)";
+        $result = $this->db->q($sql, str_repeat('i', count($boardIds)), ...$boardIds);
+
+        $owners = [];
+        if ($result) {
+            foreach ($result as $row) {
+                $owners[(int) $row['id']] = (int) $row['user_id'];
+            }
+        }
+
+        return $owners;
+    }
+
+    /**
+     * Batch-load accepted shared users for multiple boards in one query.
+     *
+     * @param array $boardIds Board IDs
+     * @return array Map of boardId => list of ['user_id' => int]
+     */
+    public function getBoardUsersForBoards(array $boardIds): array
+    {
+        $boardIds = array_values(array_filter(array_map('intval', $boardIds)));
+        if (empty($boardIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($boardIds), '?'));
+        $sql = "SELECT bs.board_id, bs.user_id
+                FROM `board_shares` bs
+                WHERE bs.board_id IN ($placeholders) AND bs.status = 'accepted'";
+        $result = $this->db->q($sql, str_repeat('i', count($boardIds)), ...$boardIds);
+
+        $usersByBoard = [];
+        if ($result) {
+            foreach ($result as $row) {
+                $usersByBoard[(int) $row['board_id']][] = ['user_id' => (int) $row['user_id']];
+            }
+        }
+
+        return $usersByBoard;
+    }
+
     // Fetch all labels for a specific board
     public function loadBoardLabels($boardId)
     {

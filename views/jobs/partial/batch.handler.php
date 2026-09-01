@@ -4,12 +4,10 @@
  * Processes bulk operations: status change, archive, delete.
  */
 
-use Dashboard\Core\CsrfProtection;
 use Dashboard\Jobs\JobController;
 
+// CSRF is enforced centrally by CsrfMiddleware via the Router
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    CsrfProtection::validateOrFail($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-
     $jobController = new JobController($db, $user);
     $result = $jobController->handleBatchAction($_POST);
 
@@ -17,14 +15,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         triggerResponse([
             "refreshJobsList" => true,
             "refreshJobStats" => true,
-            "globalMessagePopupUpdate" => [
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
                 'type' => 'success',
                 'message' => $result['message']
             ]
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => [
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
                 'type' => 'error',
                 'message' => $result['message'] ?? 'Batch action failed.'
             ]

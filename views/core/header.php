@@ -76,7 +76,7 @@
                      hx-target="body" 
                      hx-swap="beforeend">
                     <div class="profile-photo" id="header-profile-photo">
-                        <img src="<?=$user->getProfilePhotoPath()?>?t=<?=time()?>" alt="Profile Photo" id="header-profile-img">
+                        <img src="<?=($user !== null ? $user->getProfilePhotoPath() : '/assets/img/default_profile.jpg')?>?t=<?=time()?>" alt="Profile Photo" id="header-profile-img">
                     </div>
                 </div>
 

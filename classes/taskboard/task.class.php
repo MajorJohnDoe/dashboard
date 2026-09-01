@@ -119,8 +119,6 @@ class Task {
                 throw new \RuntimeException('Failed to delete task.');
             }
 
-            $this->deleteTaskImages($taskId);
-
             $this->db->commit();
             return true;
         } catch (\Exception $e) {
@@ -248,19 +246,6 @@ class Task {
         $this->addTaskLabels($userId, $taskId, $taskLabels);
     }
 
-    public function getTaskImages($taskId) {
-        $sql = "SELECT image_path FROM `shared_item_images` WHERE `item_id` = ? AND `item_type` = 'task'";
-        return $this->db->q($sql, "i", $taskId);
-    }
-
-    private function deleteTaskImages($taskId) {
-        $sql = "DELETE FROM `shared_item_images` WHERE `item_id` = ? AND `item_type` = 'task'";
-        $result = $this->db->q($sql, "i", $taskId);
-        if ($result === false) {
-            throw new \RuntimeException('Failed to delete task image records.');
-        }
-    }
-
     private function getTaskData($taskId) {
         $sql = "SELECT * FROM `tm_task` WHERE `task_id` = ? LIMIT 1";
         $result = $this->db->q($sql, "i", $taskId);
@@ -346,6 +331,112 @@ class Task {
         }
 
         return ($totalItems > 0) ? round(($completedItems / $totalItems) * 100) : 0;
+    }
+
+    /**
+     * Compute checklist completion rate from a raw task_checklist JSON string.
+     *
+     * @param string|null $checklistJson Raw JSON from tm_task.task_checklist
+     * @return int|null Percentage 0-100, or null when no checklist exists
+     */
+    public static function computeChecklistCompletionRate(?string $checklistJson): ?int
+    {
+        if (empty($checklistJson)) {
+            return null;
+        }
+
+        $checklist = json_decode($checklistJson, true);
+        if (!is_array($checklist)) {
+            return null;
+        }
+
+        $totalItems = count($checklist);
+        $completedItems = 0;
+
+        foreach ($checklist as $item) {
+            if (isset($item['status']) && $item['status'] === 'complete') {
+                $completedItems++;
+            }
+        }
+
+        return ($totalItems > 0) ? round(($completedItems / $totalItems) * 100) : 0;
+    }
+
+    /**
+     * Batch-load task details (incl. labels) for multiple task IDs in two queries.
+     * Access check mirrors loadTaskDetails(): owner or accepted board share.
+     *
+     * @param array $taskIds Task IDs to load
+     * @param int $userId Current user ID (for access check)
+     * @return array Map of taskId => ['task' => row, 'labels' => [...]]
+     */
+    public function loadTaskDetailsForTasks(array $taskIds, int $userId): array
+    {
+        $taskIds = array_values(array_filter(array_map('intval', $taskIds)));
+        if (empty($taskIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($taskIds), '?'));
+        $types = str_repeat('i', count($taskIds) + 2);
+
+        $sql = "SELECT task.*
+                FROM `tm_task` task
+                JOIN `tm_board` board ON task.`board_id` = board.`id`
+                LEFT JOIN `board_shares` bs ON board.`id` = bs.`board_id` AND bs.`user_id` = ?
+                WHERE
+                    task.task_id IN ($placeholders) AND
+                    (board.user_id = ? OR bs.`status` = 'accepted')";
+        // Param order: share-user check, task ids..., owner check.
+        // Positional args can't follow an unpack, so merge into one array.
+        $result = $this->db->q($sql, $types, ...array_merge([$userId], $taskIds, [$userId]));
+        if (!$result) {
+            return [];
+        }
+
+        // Batch-load labels for all tasks in one query
+        $labelsByTask = $this->loadTaskLabelsForTasks($taskIds);
+
+        $tasks = [];
+        foreach ($result as $row) {
+            $taskId = (int) $row['task_id'];
+            $tasks[$taskId] = [
+                'task' => $row,
+                'labels' => $labelsByTask[$taskId] ?? [],
+            ];
+        }
+
+        return $tasks;
+    }
+
+    /**
+     * Batch-load labels for multiple tasks in a single query.
+     *
+     * @param array $taskIds Task IDs
+     * @return array Map of taskId => list of label rows
+     */
+    private function loadTaskLabelsForTasks(array $taskIds): array
+    {
+        $placeholders = implode(',', array_fill(0, count($taskIds), '?'));
+
+        $sql = "SELECT tl.task_id, lbl.id, lbl.label_name, lbl.label_color
+                FROM `tm_label` lbl
+                INNER JOIN `tm_task_label_rel` tl ON lbl.id = tl.label_id
+                WHERE tl.task_id IN ($placeholders)";
+        $result = $this->db->q($sql, str_repeat('i', count($taskIds)), ...$taskIds);
+
+        $labelsByTask = [];
+        if ($result) {
+            foreach ($result as $row) {
+                $labelsByTask[(int) $row['task_id']][] = [
+                    'label_id' => $row['id'],
+                    'label_name' => $row['label_name'],
+                    'label_color' => $row['label_color'],
+                ];
+            }
+        }
+
+        return $labelsByTask;
     }
 }
 ?>

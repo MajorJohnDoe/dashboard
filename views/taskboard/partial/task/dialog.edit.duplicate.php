@@ -4,6 +4,7 @@
 
     $taskColumn = new ColumnController($db, $user);
     $taskColumns = $taskColumn->getColumnsForBoard($user->getActiveTaskBoard());
+    $post_url = '';
 
     // User wants to duplicate a task to a column
     if(isset($_GET['action']) &&  $_GET['action'] == 'dupe' && isset($_GET['taskid'])) {
@@ -20,9 +21,9 @@
         $result = $task->handleDuplicateTask($columnId, $taskId);
 
         if ($result['success'] == true) {
-            triggerResponse(["taskBoardColumnList" => true, "closeModalEvent" => true, "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]]);
+            triggerResponse([\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true, \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]]);
         } else {
-            triggerResponse(["globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]]);
+            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]]);
         }
     }
 ?>
@@ -30,6 +31,7 @@
     <div class="nice-form-group" id="dialog-task-duplicate" style="width: 30rem; padding: 10px">
         <div class="form-inner">
             <form id="form_duplicateTask" method="POST" hx-post="<?=$post_url?>" hx-target="#dialog-task-duplicate .form-inner" hx-swap="beforeend">
+                <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                 
                 <div class="flex-table">
                     <div class="flex-row">

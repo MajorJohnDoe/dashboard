@@ -1,7 +1,5 @@
 <?php   
 use Dashboard\Taskboard\BoardController;
-use Dashboard\Taskboard\ColumnController;
-use Dashboard\Taskboard\Task;
 
 // Initialize task board object
 $board = new BoardController($db, $user);

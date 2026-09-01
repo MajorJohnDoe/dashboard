@@ -46,7 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(checkUnreadNotifications, 30000);
     
     // Listen for refreshNotificationsDialog to update the tab count
-    document.body.addEventListener('refreshNotificationsDialog', () => {
+    document.body.addEventListener(HTMX_EVENTS.REFRESH_NOTIFICATIONS_DIALOG, () => {
         fetch('/notifications/check')
             .then(response => response.json())
             .then(data => {

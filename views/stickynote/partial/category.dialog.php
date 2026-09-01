@@ -16,11 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             triggerResponse([
                 "refreshThisModal" => true,
                 "triggerNoteCatlist" => true,
-                "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message'] ?? 'Category created successfully']
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Category created successfully']
             ]);
         } else {
             triggerResponse([
-                "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create category']
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create category']
             ]);
         }
     } 
@@ -30,11 +30,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             triggerResponse([
                 "refreshThisModal" => true,
                 "triggerNoteCatlist" => true,
-                "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message'] ?? 'Category updated successfully']
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Category updated successfully']
             ]);
         } else {
             triggerResponse([
-                "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to update category']
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to update category']
             ]);
         }
     }
@@ -46,11 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         triggerResponse([
             "refreshThisModal" => true,
             "triggerNoteCatlist" => true,
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message'] ?? 'Category deleted successfully']
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Category deleted successfully']
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to delete category']
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to delete category']
         ]);
     }
 }
@@ -76,6 +76,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get-edit-form') {
         // Return only the form HTML for HTMX to inject
 ?>
             <form hx-post="/stickynotes/category/dialog/?action=edit" hx-target="#dialog-category-settings .formOuter" hx-swap="outerHTML">
+                <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
             <input type="hidden" name="category_id" value="<?= htmlspecialchars($category['id'] ?? '') ?>">
             <div class="flex-table" style="background: #e2edf3; border-radius: 0.5rem; margin-bottom: 2rem;">
                 <div class="flex-row">
@@ -168,6 +169,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get-edit-form') {
                         </div>
 
                         <form id="add-category-form" hx-post="/stickynotes/category/dialog/?action=create" hx-target="#dialog-category-settings .formOuter" hx-swap="beforeend">
+                            <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                             <div class="flex-table">
                                 <div class="flex-row">
                                     <div class="flex-cell">

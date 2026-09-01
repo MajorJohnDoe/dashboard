@@ -27,7 +27,7 @@ else {
         <div 
             class="sn-note open-modal-btn" 
             data-modal-target="#dialog-note"
-            style="background-color: <?=htmlspecialchars($note['category_color'] ?? '#fff');?>;"
+            style="--note-accent: <?=htmlspecialchars($note['category_color'] ?? '#9aa7b5');?>;"
             hx-get="/stickynotes/note/edit/<?=htmlspecialchars($note['id']); ?>" 
             hx-target="body" 
             hx-swap="beforeend">
@@ -36,7 +36,7 @@ else {
                 <span class="sn-note-category" >
                     <?=(isset($note['category_title']) ? htmlspecialchars($note['category_title']) : 'Uncategorized');?>
                 </span>
-                <span class="sn-note-year"><?php echo date('Y', strtotime($note['created_at'])); ?></span>
+                <span class="sn-note-date"><?php echo date('M j, Y', strtotime($note['created_at'])); ?></span>
             </div>
             <h3 class="sn-note-title"><?=htmlspecialchars($note['title']); ?></h3>
             <p class="sn-note-content"><?=$strippedNoteSummary?></p>

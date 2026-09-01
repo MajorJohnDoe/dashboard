@@ -13,6 +13,7 @@ class Router {
     private $user;
     private $view;
     private $authMiddleware;
+    private $csrfMiddleware;
     private $session;
 
     // Storage for routes
@@ -27,6 +28,7 @@ class Router {
         $this->view = $view;
         $this->session = $session;
         $this->authMiddleware = new AuthMiddleware($user);
+        $this->csrfMiddleware = new CsrfMiddleware();
     }
 
     /**
@@ -104,6 +106,12 @@ class Router {
             if (!$middleware->handle()) {
                 return;
             }
+        }
+
+        // Enforce CSRF protection on state-changing requests (unless opted out)
+        $csrfEnabled = !isset($route['options']['csrf']) || $route['options']['csrf'] !== false;
+        if ($csrfEnabled && !$this->csrfMiddleware->handle()) {
+            return;
         }
 
         if ($this->isControllerRoute($route['handler'])) {
@@ -189,7 +197,13 @@ class Router {
             return json_encode(['error' => 'Not Found', 'path' => $path]);
         }
         
-        return $this->view->render('404', ['options' => ['title' => '404 Not Found', 'full_page' => true]]);
+        // Pass db/user so full-page views (header.php) can access them
+        return $this->view->render('404', [
+            'db' => $this->db,
+            'user' => $this->user,
+            'session' => $this->session,
+            'options' => ['title' => '404 Not Found', 'full_page' => true]
+        ]);
     }
 
     /**

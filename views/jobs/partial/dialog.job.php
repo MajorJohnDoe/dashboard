@@ -33,23 +33,22 @@ $jobData = [
 ];
 
 // #MARK: DELETE job
+// CSRF is enforced centrally by CsrfMiddleware via the Router
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE' || ($action === 'delete' && $jobId > 0)) {
-    CsrfProtection::validateOrFail($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-    
     $result = $jobController->handleDeleteApplication($jobId);
     if ($result['success']) {
         triggerResponse([
             "refreshJobsList" => true,
             "refreshJobStats" => true,
-            "closeModalEvent" => true,
-            "globalMessagePopupUpdate" => [
+            \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true,
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
                 'type' => 'success',
                 'message' => $result['message']
             ]
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => [
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
                 'type' => 'error',
                 'message' => $result['message']
             ]
@@ -58,9 +57,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' || ($action === 'delete' && $jobId >
 }
 
 // #MARK: POST create or edit
+// CSRF is enforced centrally by CsrfMiddleware via the Router
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    CsrfProtection::validateOrFail($_POST['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? null);
-
     if ($isEdit) {
         $result = $jobController->handleUpdateApplication($jobId, $_POST);
     } else {
@@ -71,15 +69,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         triggerResponse([
             "refreshJobsList" => true,
             "refreshJobStats" => true,
-            "closeModalEvent" => true,
-            "globalMessagePopupUpdate" => [
+            \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true,
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
                 'type' => 'success',
                 'message' => $result['message']
             ]
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => [
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
                 'type' => 'error',
                 'message' => $result['message']
             ]
@@ -118,7 +116,7 @@ $csrfToken = CsrfProtection::getToken();
                 <?php endif; ?>
 
                 <div class="nice-form-group">
-                    <div class="job-edit-grid">
+                    <div class="edit-grid">
                         <!-- Left Column: Title, Company, Department, Rich Text Notes -->
                         <div class="left-column">
                             <div class="flex-table">
@@ -167,11 +165,10 @@ $csrfToken = CsrfProtection::getToken();
 
                                 <div class="flex-row">
                                     <div class="flex-cell">
-                                        <label for="job_notes">Job description:</label><br>
+                                        <label for="job_notes">Job description:</label>
                                         <textarea name="notes" 
                                                   id="job_notes" 
-                                                  class="tinymce_editor" 
-                                                  style="height: 0rem; width: 100%; position: absolute; visibility: hidden;" 
+                                                  class="tinymce_editor tinymce-hidden" 
                                                   aria-hidden="true"><?= htmlspecialchars($jobData['notes'] ?? '') ?></textarea>
                                     </div>
                                 </div>
@@ -185,24 +182,24 @@ $csrfToken = CsrfProtection::getToken();
                                 <div class="flex-row form-sidebar-section">
                                     <div class="flex-cell">
                                         <span class="form-label">Status</span>
-                                        <div class="job-status-container" style="margin-top: 0.3rem;">
-                                            <input type="radio" id="status-wishlist" name="status" value="wishlist" class="job-status-input" <?= $jobData['status'] === 'wishlist' ? 'checked' : '' ?>>
-                                            <label for="status-wishlist" class="job-status-label status-btn-wishlist">Wishlist</label>
+                                        <div class="pill-select cols-2" style="margin-top: 0.3rem;">
+                                            <input type="radio" id="status-wishlist" name="status" value="wishlist" <?= $jobData['status'] === 'wishlist' ? 'checked' : '' ?>>
+                                            <label for="status-wishlist" class="pill-select-label status-btn-wishlist">Wishlist</label>
 
-                                            <input type="radio" id="status-applied" name="status" value="applied" class="job-status-input" <?= $jobData['status'] === 'applied' ? 'checked' : '' ?>>
-                                            <label for="status-applied" class="job-status-label status-btn-applied">Applied</label>
+                                            <input type="radio" id="status-applied" name="status" value="applied" <?= $jobData['status'] === 'applied' ? 'checked' : '' ?>>
+                                            <label for="status-applied" class="pill-select-label status-btn-applied">Applied</label>
 
-                                            <input type="radio" id="status-interviewing" name="status" value="interviewing" class="job-status-input" <?= $jobData['status'] === 'interviewing' ? 'checked' : '' ?>>
-                                            <label for="status-interviewing" class="job-status-label status-btn-interviewing">Interview</label>
+                                            <input type="radio" id="status-interviewing" name="status" value="interviewing" <?= $jobData['status'] === 'interviewing' ? 'checked' : '' ?>>
+                                            <label for="status-interviewing" class="pill-select-label status-btn-interviewing">Interview</label>
 
-                                            <input type="radio" id="status-offer" name="status" value="offer" class="job-status-input" <?= $jobData['status'] === 'offer' ? 'checked' : '' ?>>
-                                            <label for="status-offer" class="job-status-label status-btn-offer">Offer</label>
+                                            <input type="radio" id="status-offer" name="status" value="offer" <?= $jobData['status'] === 'offer' ? 'checked' : '' ?>>
+                                            <label for="status-offer" class="pill-select-label status-btn-offer">Offer</label>
 
-                                            <input type="radio" id="status-rejected" name="status" value="rejected" class="job-status-input" <?= $jobData['status'] === 'rejected' ? 'checked' : '' ?>>
-                                            <label for="status-rejected" class="job-status-label status-btn-rejected">Rejected</label>
+                                            <input type="radio" id="status-rejected" name="status" value="rejected" <?= $jobData['status'] === 'rejected' ? 'checked' : '' ?>>
+                                            <label for="status-rejected" class="pill-select-label status-btn-rejected">Rejected</label>
 
-                                            <input type="radio" id="status-archived" name="status" value="archived" class="job-status-input" <?= $jobData['status'] === 'archived' ? 'checked' : '' ?>>
-                                            <label for="status-archived" class="job-status-label status-btn-archived">Archived</label>
+                                            <input type="radio" id="status-archived" name="status" value="archived" <?= $jobData['status'] === 'archived' ? 'checked' : '' ?>>
+                                            <label for="status-archived" class="pill-select-label status-btn-archived">Archived</label>
                                         </div>
                                     </div>
                                 </div>
@@ -238,15 +235,15 @@ $csrfToken = CsrfProtection::getToken();
                                 <div class="flex-row form-sidebar-section">
                                     <div class="flex-cell">
                                         <span class="form-label">Interest</span>
-                                        <div class="job-interest-container" style="margin-top: 0.3rem;">
-                                            <input type="radio" id="interest-excited" name="interest_level" value="excited" class="job-interest-input" <?= ($jobData['interest_level'] === 'excited' || $jobData['interest_level'] === 'dream') ? 'checked' : '' ?>>
-                                            <label for="interest-excited" class="job-interest-label interest-excited">Excited</label>
+                                        <div class="pill-select" style="margin-top: 0.3rem;">
+                                            <input type="radio" id="interest-excited" name="interest_level" value="excited" <?= ($jobData['interest_level'] === 'excited' || $jobData['interest_level'] === 'dream') ? 'checked' : '' ?>>
+                                            <label for="interest-excited" class="pill-select-label interest-excited">Excited</label>
 
-                                            <input type="radio" id="interest-interested" name="interest_level" value="interested" class="job-interest-input" <?= ($jobData['interest_level'] === 'interested' || empty($jobData['interest_level'])) ? 'checked' : '' ?>>
-                                            <label for="interest-interested" class="job-interest-label interest-interested">Interested</label>
+                                            <input type="radio" id="interest-interested" name="interest_level" value="interested" <?= ($jobData['interest_level'] === 'interested' || empty($jobData['interest_level'])) ? 'checked' : '' ?>>
+                                            <label for="interest-interested" class="pill-select-label interest-interested">Interested</label>
 
-                                            <input type="radio" id="interest-meh" name="interest_level" value="meh" class="job-interest-input" <?= $jobData['interest_level'] === 'meh' ? 'checked' : '' ?>>
-                                            <label for="interest-meh" class="job-interest-label interest-meh">Meh</label>
+                                            <input type="radio" id="interest-meh" name="interest_level" value="meh" <?= $jobData['interest_level'] === 'meh' ? 'checked' : '' ?>>
+                                            <label for="interest-meh" class="pill-select-label interest-meh">Meh</label>
                                         </div>
                                     </div>
                                 </div>

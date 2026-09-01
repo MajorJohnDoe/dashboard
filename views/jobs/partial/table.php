@@ -95,7 +95,7 @@ $csrfToken = CsrfProtection::getToken();
 
                         <!-- Status -->
                         <td>
-                            <span class="status-pill status-<?= htmlspecialchars($job['status']) ?>">
+                            <span class="pill status-btn-<?= htmlspecialchars($job['status']) ?>">
                                 <?= htmlspecialchars(ucfirst($job['status'])) ?>
                             </span>
                         </td>
@@ -115,7 +115,7 @@ $csrfToken = CsrfProtection::getToken();
 
                         <!-- Interest Badge -->
                         <td>
-                            <span class="interest-pill <?= $interestClass ?>">
+                            <span class="pill <?= $interestClass ?>">
                                 <?= $interestLabel ?>
                             </span>
                         </td>

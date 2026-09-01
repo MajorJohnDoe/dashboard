@@ -23,14 +23,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $controller->handleCreateNote();
         if ($result['success']) {
             triggerResponse([
-                "triggerNotelist" => true, 
+                \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true, 
                 "triggerNoteCatlist" => true,
-                "closeSpecificModalEvent" => ["dialog-note"],
-                "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message'] ?? 'Note created successfully']
+                \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-note"],
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Note created successfully']
             ]);
         } else {
             triggerResponse([
-                "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create note']
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to create note']
             ]);
         }
     } 
@@ -39,14 +39,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($result['success']) {
             triggerResponse([
-                "refreshModal" => true,
-                "triggerNotelist" => true, 
+                \Dashboard\Core\HtmxEvents::REFRESH_MODAL => true,
+                \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true, 
                 "triggerNoteCatlist" => true,
-                "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message'] ?? 'Note updated successfully']
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Note updated successfully']
             ]);
         } else {
             triggerResponse([
-                "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to update note']
+                \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to update note']
             ]);
         }
     }
@@ -61,14 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
     
     if ($result['success']) {
         triggerResponse([
-            "triggerNotelist" => true, 
+            \Dashboard\Core\HtmxEvents::TRIGGER_NOTELIST => true, 
             "triggerNoteCatlist" => true,
-            "closeSpecificModalEvent" => ["dialog-note"], 
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => 'Note deleted successfully']
+            \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-note"], 
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => 'Note deleted successfully']
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to delete note']
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to delete note']
         ]);
     }
 }
@@ -92,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
 
             <div class="flex-table nice-form-group" style="align-items: stretch; height: 100%;">
                 <form id="form_stickynote" method="POST" hx-post="<?=$post_url?>" hx-target="#dialog-note .formOuter" hx-swap="beforeend" style="height: 100%; height: 100%; align-items: stretch; display: flex; flex-flow: column;">
+                    <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                 <div class="flex-row">
                     <div class="flex-cell">
                         <input type="text" placeholder="Note title" name="title" id="note_title" value="<?=htmlspecialchars($note['title'] ?? '');?>">

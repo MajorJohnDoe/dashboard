@@ -3,7 +3,7 @@ namespace Dashboard\Stickynote;
 
 use Dashboard\Core\User;
 use Dashboard\Core\Interfaces\DatabaseInterface;
-use Dashboard\Core\SharedImageHandler;
+use Dashboard\Core\ItemImageService;
 use Dashboard\Stickynote\StickyNote;
 use Dashboard\Stickynote\StickyCategory;
 
@@ -241,83 +241,11 @@ class StickyNoteController {
 
 
     private function processNoteImages($userId, $noteId, $noteContent) {
-        $imageHandler = new SharedImageHandler($userId, $noteId, $noteContent, $this->db, 'stickynote');
-        $imageProcessingResult = $imageHandler->processImages();
-        
-        foreach ($imageProcessingResult['toDelete'] as $fileToDelete) {
-            $this->securelyDeleteFile($fileToDelete);
-        }
-        
-        return $imageProcessingResult['newContent'];
+        return $this->getImageService()->processAndPersist($userId, $noteId, $noteContent, 'stickynote');
     }
 
-    /**
-     * Securely deletes a file after performing various safety checks
-     */
-    private function securelyDeleteFile($filePath) {
-        // Step 1: Validate the file path
-        $fullPath = $this->validateAndSanitizePath($filePath);
-        if ($fullPath === false) {
-            error_log("Invalid file path attempted to be deleted: " . $filePath);
-            return false;
-        }
-
-        // Step 2: Check if the file exists and is within the allowed directory
-        if (!file_exists($fullPath) || !$this->isInAllowedDirectory($fullPath)) {
-            error_log("File does not exist or is not in an allowed directory: " . $fullPath);
-            return false;
-        }
-
-        // Step 3: Ensure the file is owned by the web server process
-        if (!$this->isOwnedByWebServer($fullPath)) {
-            error_log("File is not owned by the web server process: " . $fullPath);
-            return false;
-        }
-
-        // Step 4: Attempt to delete the file
-        if (unlink($fullPath)) {
-            error_log("Successfully deleted file: " . $fullPath);
-            return true;
-        } else {
-            error_log("Failed to delete file: " . $fullPath);
-            return false;
-        }
-    }
-
-    /**
-     * Validates and sanitizes a file path, ensuring it's within the allowed directory
-     */
-    private function validateAndSanitizePath($filePath) {
-        // Remove any null bytes
-        $filePath = str_replace(chr(0), '', $filePath);
-
-        // Resolve the real path, removing any '..' or symbolic links
-        $realPath = realpath(dirname(__DIR__, 2) . $filePath);
-
-        // Check if the path is within the allowed directory
-        $allowedDirectory = realpath(dirname(__DIR__, 2) . '/uploads');
-        if (strpos($realPath, $allowedDirectory) === 0) {
-            return $realPath;
-        }
-
-        return false;
-    }
-
-    /**
-     * Checks if a given file path is within the allowed directory
-     */
-    private function isInAllowedDirectory($fullPath) {
-        $allowedDirectory = realpath(dirname(__DIR__, 2) . '/uploads');
-        return strpos($fullPath, $allowedDirectory) === 0;
-    }
-
-    /**
-     * Verifies if the file is owned by the web server process
-     */
-    private function isOwnedByWebServer($fullPath) {
-        $fileOwner = fileowner($fullPath);
-        $serverOwner = posix_getpwuid(posix_geteuid());
-        return $fileOwner === $serverOwner['uid'];
+    private function getImageService(): ItemImageService {
+        return new ItemImageService($this->db);
     }
 }
 

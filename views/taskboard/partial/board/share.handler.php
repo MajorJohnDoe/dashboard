@@ -31,11 +31,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'share') {
     if ($result['success']) {
         triggerResponse([
             "boardMembersUpdate" => true,
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
         ]);
     }
 }
@@ -53,11 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     if ($result['success']) {
         triggerResponse([
             "boardMembersUpdate" => true,
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
         ]);
     }
 }
@@ -77,11 +77,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         triggerResponse([
             "boardMembersUpdate" => true,
             "notificationsUpdate" => true,
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
         ]);
     }
 }

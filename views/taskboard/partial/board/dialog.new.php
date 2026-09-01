@@ -8,14 +8,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($result['success']) {
         triggerResponse([
-            "newBoard" => true,
-            "taskBoardColumnList" => true,
-            "closeSpecificModalEvent" => ["dialog-board-new"],
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::NEW_BOARD => true,
+            \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+            \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board-new"],
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]
         ]);
     }
 }
@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         </div>
         <div class="formOuter">
             <form id="form_createBoard" method="POST" hx-post="/board/dialog/new" hx-target="#dialog-board-new" hx-swap="outerHTML">
+                <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                 <div class="nice-form-group" style="padding: 1.5rem;">
                     <div class="flex-table">
                         <div class="flex-row">

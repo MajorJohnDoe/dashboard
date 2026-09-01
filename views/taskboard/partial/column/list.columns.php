@@ -14,6 +14,28 @@ $priorityClasses = [
     4 => 'priority-highest',
 ];
 
+// Batch-load all task data up front (2 queries total instead of 2 per task)
+$allTaskIds = [];
+if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
+    foreach ($columnsResult['columns'] as $column) {
+        $tasksResult = $columnController->getTasksForColumn(
+            $column['id'],
+            $column['column_task_order'],
+            $column['column_max_display_tasks']
+        );
+        if ($tasksResult['success']) {
+            foreach ($tasksResult['tasks'] as $task) {
+                $allTaskIds[] = $task['task_id'];
+            }
+        }
+    }
+
+    $taskController = new TaskController($db, $user);
+    $tasksById = $taskController->loadTaskDataByIds($allTaskIds, $user->getUserId());
+} else {
+    $tasksById = [];
+}
+
 if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
     echo '<div class="columns-container">';
             
@@ -52,10 +74,9 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
 
         if ($tasksResult['success']) {
             foreach ($tasksResult['tasks'] as $task) {
-                $objTask = new TaskController($db, $user);
-                $taskData = $objTask->loadTaskDataById($task['task_id'], $user->getUserId());
-                $taskSelectedLabels = $objTask->getTaskLabels();
-                $completionRate = $objTask->getChecklistCompletionRate();
+                $batchedTask = $tasksById[$task['task_id']] ?? null;
+                $taskSelectedLabels = $batchedTask['labels'] ?? [];
+                $completionRate = $batchedTask['completion_rate'] ?? null;
 
                 $taskLabels = '';
                 if (!empty($taskSelectedLabels)) {

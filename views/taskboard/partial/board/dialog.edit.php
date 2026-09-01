@@ -1,6 +1,5 @@
 <?php        
 use Dashboard\Taskboard\BoardController;
-use Dashboard\Taskboard\ColumnController;
 
 // Initialize the controller
 $controller = new BoardController($db, $user);
@@ -15,12 +14,11 @@ $post_url = '/board/dialog/edit';
 if($_GET['action'] == 'edit') {
     $board_result = $controller->loadBoardDataById($user->getActiveTaskBoard());
     if($board_result) {
-        $boardId = $board_result[0]['id'];
         $BoardName = $board_result[0]['tm_name'];
     }
 
-    $objColumn = new ColumnController($db, $user);
-    $BoardColumns = $objColumn->getColumnsForBoard($user->user_id(), $user->getActiveTaskBoard());
+    // Note: board columns are lazy-loaded by dialog.edit.columns.php via the
+    // hx-get="/board/dialog/columns/edit" trigger below - no need to load them here.
 }
 
 // Handle POST requests
@@ -28,10 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_GET['action'] ?? '';
 
     switch ($action) {
-        /* case 'create':
-            $boardName = $_POST['board_title'] ?? '';
-            $result = $controller->handleCreateBoard($boardName);
-            break; */
         case 'edit':
             $boardId = $user->getActiveTaskBoard();
             $boardTitle = $_POST['board_title'] ?? '';
@@ -42,19 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($result['success']) {
-        $response = [
-            "taskBoardColumnList" => true,
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message'] ?? 'Operation successful']
-        ];
-
-        if ($action === 'create' || $action === 'delete') {
-            $response["closeSpecificModalEvent"] = ["dialog-board"];
-        }
-
-        triggerResponse($response);
+        triggerResponse([
+            \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Operation successful']
+        ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Operation failed']
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Operation failed']
         ]);
     }
 }
@@ -66,13 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
 
     if ($result['success']) {
         triggerResponse([
-            "taskBoardColumnList" => true,
-            "closeSpecificModalEvent" => ["dialog-board"],
-            "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message'] ?? 'Board deleted successfully']
+            \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+            \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board"],
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message'] ?? 'Board deleted successfully']
         ]);
     } else {
         triggerResponse([
-            "globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to delete board']
+            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message'] ?? 'Failed to delete board']
         ]);
     }
 }
@@ -88,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
         <!-- end of modal header -->
 
             <div class="nice-form-group">
-                <div class="task-edit-grid">
+                <div class="edit-grid">
                     <!-- Left Column -->
                     <div class="left-column">
                         <div class="flex-table">

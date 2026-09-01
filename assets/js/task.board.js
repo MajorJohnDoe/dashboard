@@ -3,6 +3,12 @@
  * This file is included in view_taskboard.php and manages taskboard functionality.
  */
 
+// Reads the CSRF token from the global meta tag set in header.php
+function getCsrfTokenMeta() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.content : '';
+}
+
 // Utility functions
 const Utilities = (() => {
     /**
@@ -66,9 +72,12 @@ const SortableManager = (() => {
     function updateColumnOrder(columnIds) {
         return fetch('/column/save-column-order', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfTokenMeta()
+            },
             body: JSON.stringify({ columnOrders: columnIds })
-        }).then(response => 
+        }).then(response =>
             Utilities.handleFetchResponse(
                 response, 
                 "Column order updated successfully", 
@@ -87,9 +96,12 @@ const SortableManager = (() => {
     function moveTaskToColumn(itemId, newListId, itemIds) {
         return fetch('/task/move-to-column', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': getCsrfTokenMeta()
+            },
             body: JSON.stringify({ itemId, newListId, itemIds })
-        }).then(response => 
+        }).then(response =>
             Utilities.handleFetchResponse(
                 response, 
                 "Task moved successfully (JS)", 
@@ -114,7 +126,7 @@ const SortableManager = (() => {
                     console.log("New column order:", columnIds);
                     updateColumnOrder(columnIds).then(success => {
                         if (success) {
-                            document.getElementById('taskboard-container').dispatchEvent(new CustomEvent('taskBoardColumnList', {bubbles: true}));
+                            document.getElementById('taskboard-container').dispatchEvent(new CustomEvent(HTMX_EVENTS.TASK_BOARD_COLUMN_LIST, {bubbles: true}));
                         }
                     });
                 }

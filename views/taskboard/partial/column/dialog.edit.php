@@ -1,6 +1,5 @@
 <?php    
 use Dashboard\Taskboard\ColumnController;
-use Dashboard\Taskboard\Task;
 
 // Assume we've already instantiated $db and $user objects
 $columnController = new ColumnController($db, $user);
@@ -77,7 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'], $_GET['col
         <!-- end of modal header -->
 
             <form id="form_column_edit" hx-post="<?=$postUrl?>" hx-target="#dialog-column-settings .formOuter" hx-swap="beforeend">
-                <div class="task-edit-grid nice-form-group" style="grid-template-columns: 3fr 1fr;">
+                <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
+                <div class="edit-grid nice-form-group" style="grid-template-columns: 3fr 1fr;">
                     <div class="left-column">
                         <div class="flex-table">
                             <div class="flex-row">

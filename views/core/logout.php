@@ -1,7 +1,8 @@
 <?php
-use Dashboard\Core\Database;
-use Dashboard\Core\SecureSession;
-use Dashboard\Core\User;
+use Dashboard\Core\CsrfProtection;
+
+// Rotate the CSRF token before destroying the session
+CsrfProtection::regenerate();
 
 $user->Logout();
  

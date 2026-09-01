@@ -33,9 +33,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($result['success']) {
-        triggerResponse(["refreshProfileModal" => true, "globalMessagePopupUpdate" => ['type' => 'success', 'message' => $result['message']]], false);
+        triggerResponse([\Dashboard\Core\HtmxEvents::REFRESH_PROFILE_MODAL => true, \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $result['message']]], false);
     } else {
-        triggerResponse(["globalMessagePopupUpdate" => ['type' => 'error', 'message' => $result['message']]], false);
+        triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $result['message']]], false);
     }
 
 }
@@ -135,6 +135,7 @@ $userPhotoPath = $user->getProfilePhotoPath();
                 
                 <!-- Password Change Section -->
                 <form id="form_change_password" hx-post="/account/settings" hx-target="#modal-profile-settings .formOuter" hx-swap="beforeend">
+                    <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                     <input type="hidden" name="action" value="update_password">
                     <div class="flex-row">
                         <div class="flex-cell "><h3>Password settings:</h3></div>
@@ -156,6 +157,7 @@ $userPhotoPath = $user->getProfilePhotoPath();
 
                 <!-- Password Change Section -->
                 <form id="form_change_gpt_key" hx-post="/account/settings" hx-target="#modal-profile-settings .formOuter" hx-swap="beforeend">
+                    <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                     <input type="hidden" name="action" value="change_gpt_key">
                     <div class="flex-row">
                         <div class="flex-cell"><h3>AI API:</h3></div>
