@@ -87,24 +87,19 @@ class NotificationsController
         // CSRF is enforced centrally by CsrfMiddleware via the Router
         $notificationId = $_POST['notification_id'] ?? null;
         if (!$notificationId) {
-            triggerResponse([
-                'globalMessagePopupUpdate' => ['type' => 'error', 'message' => 'Invalid notification ID']
-            ]);
+            triggerResponse(HtmxEvents::errorResponse('Invalid notification ID'));
             return;
         }
 
         $result = $this->notifications->markAsRead($notificationId, $this->user->getUserId());
 
         if ($result) {
-            triggerResponse([
-                'notificationsUpdate' => true,
-                'refreshNotificationsDialog' => true,
-                'globalMessagePopupUpdate' => ['type' => 'success', 'message' => 'Notification marked as read']
-            ]);
+            triggerResponse(HtmxEvents::successResponse('Notification marked as read', [
+                HtmxEvents::NOTIFICATIONS_UPDATE => true,
+                HtmxEvents::REFRESH_NOTIFICATIONS_DIALOG => true,
+            ]));
         } else {
-            triggerResponse([
-                'globalMessagePopupUpdate' => ['type' => 'error', 'message' => 'Failed to mark notification as read']
-            ]);
+            triggerResponse(HtmxEvents::errorResponse('Failed to mark notification as read'));
         }
     }
 
@@ -117,15 +112,12 @@ class NotificationsController
         $result = $this->notifications->markAllAsRead($this->user->getUserId());
 
         if ($result) {
-            triggerResponse([
-                'notificationsUpdate' => true,
-                'refreshNotificationsDialog' => true,
-                'globalMessagePopupUpdate' => ['type' => 'success', 'message' => 'All notifications marked as read']
-            ]);
+            triggerResponse(HtmxEvents::successResponse('All notifications marked as read', [
+                HtmxEvents::NOTIFICATIONS_UPDATE => true,
+                HtmxEvents::REFRESH_NOTIFICATIONS_DIALOG => true,
+            ]));
         } else {
-            triggerResponse([
-                'globalMessagePopupUpdate' => ['type' => 'error', 'message' => 'Failed to mark notifications as read']
-            ]);
+            triggerResponse(HtmxEvents::errorResponse('Failed to mark notifications as read'));
         }
     }
 
@@ -146,15 +138,12 @@ class NotificationsController
         $result = $this->notifications->deleteNotification($notificationId, $this->user->getUserId());
 
         if ($result) {
-            triggerResponse([
-                'notificationsUpdate' => true,
-                'refreshNotificationsDialog' => true,
-                'globalMessagePopupUpdate' => ['type' => 'success', 'message' => 'Notification deleted']
-            ]);
+            triggerResponse(HtmxEvents::successResponse('Notification deleted', [
+                HtmxEvents::NOTIFICATIONS_UPDATE => true,
+                HtmxEvents::REFRESH_NOTIFICATIONS_DIALOG => true,
+            ]));
         } else {
-            triggerResponse([
-                'globalMessagePopupUpdate' => ['type' => 'error', 'message' => 'Failed to delete notification']
-            ]);
+            triggerResponse(HtmxEvents::errorResponse('Failed to delete notification'));
         }
     }
 
@@ -166,15 +155,13 @@ class NotificationsController
         // CSRF is enforced centrally by CsrfMiddleware via the Router
         $boardId = $_POST['board_id'] ?? null;
         if (!$boardId) {
-            triggerResponse([
-                'globalMessagePopupUpdate' => ['type' => 'error', 'message' => 'Missing board ID']
-            ]);
+            triggerResponse(HtmxEvents::errorResponse('Missing board ID'));
             return;
         }
 
         $boardController = new BoardController($this->db, $this->user);
         $result = $boardController->handleInvitationAccept();
-        triggerResponse($result);
+        triggerResponse($this->invitationResultTriggers($result));
     }
 
     /**
@@ -185,15 +172,13 @@ class NotificationsController
         // CSRF is enforced centrally by CsrfMiddleware via the Router
         $boardId = $_POST['board_id'] ?? null;
         if (!$boardId) {
-            triggerResponse([
-                'globalMessagePopupUpdate' => ['type' => 'error', 'message' => 'Missing board ID']
-            ]);
+            triggerResponse(HtmxEvents::errorResponse('Missing board ID'));
             return;
         }
 
         $boardController = new BoardController($this->db, $this->user);
         $result = $boardController->handleInvitationDecline();
-        triggerResponse($result);
+        triggerResponse($this->invitationResultTriggers($result));
     }
 
     // Legacy methods for backward compatibility
@@ -248,24 +233,16 @@ class NotificationsController
         return $this->notifications->addNotification($userId, $type, $data);
     }
 
-    protected function triggerResponse($response)
+    /**
+     * Map an invitation accept/decline result to an HX-Trigger payload.
+     * The controller result already carries notificationsUpdate; add the toast.
+     */
+    private function invitationResultTriggers(array $result): array
     {
-        if ($response['success']) {
-            triggerResponse([
-                HtmxEvents::NOTIFICATIONS_UPDATE => true,
-                HtmxEvents::GLOBAL_MESSAGE => [
-                    'type' => 'success',
-                    'message' => $response['message']
-                ]
-            ]);
-        } else {
-            triggerResponse([
-                HtmxEvents::GLOBAL_MESSAGE => [
-                    'type' => 'error',
-                    'message' => $response['message']
-                ]
-            ]);
-        }
+        $extra = isset($result['notificationsUpdate']) ? [HtmxEvents::NOTIFICATIONS_UPDATE => true] : [];
+        return $result['success']
+            ? HtmxEvents::successResponse($result['message'], $extra)
+            : HtmxEvents::errorResponse($result['message']);
     }
 
     public function getBoardData($boardId)
