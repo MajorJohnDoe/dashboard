@@ -3,6 +3,7 @@ namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\User;
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Core\NotificationsController;
 use Dashboard\Core\Notifications\NotificationService;
 use Dashboard\Core\Notifications;
@@ -170,15 +171,15 @@ class BoardController
         $response = $this->handleCreateBoard($newBoardName);
 
         if ($response['success']) {
-            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+            triggerResponse(HtmxEvents::successResponse(
                 $response['message'],
                 [
-                    \Dashboard\Core\HtmxEvents::NEW_BOARD => true,
-                    \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                    HtmxEvents::NEW_BOARD => true,
+                    HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
                 ]
             ), false);
         } else {
-            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($response['message']), false);
+            triggerResponse(HtmxEvents::errorResponse($response['message']), false);
         }
 
         // Return an empty string because triggerResponse has already sent the response

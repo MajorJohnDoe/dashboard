@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\BoardController;
 use Dashboard\Core\Notifications;
 
@@ -29,9 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'share') {
     $result = $controller->shareBoard($boardId, $email, $accessLevel);
     
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse($result['message'], ["boardMembersUpdate" => true]));
+        triggerResponse(HtmxEvents::successResponse($result['message'], ["boardMembersUpdate" => true]));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
+        triggerResponse(HtmxEvents::errorResponse($result['message']));
     }
 }
 
@@ -46,9 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'PUT') {
     $result = $controller->updateBoardAccess($boardId, $userId, $accessLevel);
     
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse($result['message'], ["boardMembersUpdate" => true]));
+        triggerResponse(HtmxEvents::successResponse($result['message'], ["boardMembersUpdate" => true]));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
+        triggerResponse(HtmxEvents::errorResponse($result['message']));
     }
 }
 
@@ -64,11 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
         $notifications = new Notifications($db);
         $notifications->deleteBoardInviteNotification($boardId, (int)$userId);
         
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+        triggerResponse(HtmxEvents::successResponse(
             $result['message'],
             ["boardMembersUpdate" => true, "notificationsUpdate" => true]
         ));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
+        triggerResponse(HtmxEvents::errorResponse($result['message']));
     }
 }

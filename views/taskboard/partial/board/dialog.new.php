@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\BoardController;
 
 $controller = new BoardController($db, $user);
@@ -7,16 +8,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $result = $controller->handleCreateBoard();
 
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+        triggerResponse(HtmxEvents::successResponse(
             $result['message'],
             [
-                \Dashboard\Core\HtmxEvents::NEW_BOARD => true,
-                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
-                \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board-new"],
+                HtmxEvents::NEW_BOARD => true,
+                HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board-new"],
             ]
         ));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
+        triggerResponse(HtmxEvents::errorResponse($result['message']));
     }
 }
 ?>

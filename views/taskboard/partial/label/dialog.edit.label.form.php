@@ -1,4 +1,5 @@
 <?php   
+    use Dashboard\Core\HtmxEvents;
     use Dashboard\Taskboard\BoardController;
 
     $keyColors = ['#f5cfcf', '#f5cfe1', '#f4cff5', '#e6cff5', '#dbcff5', '#d1cff5', '#cfddf5', '#cfebf5', '#cff5f2', '#cff5e6', '#cff5db', '#d4f5cf','#e3f5cf','#ebf5cf','#f5f5cf','#f5dfcf'];
@@ -32,7 +33,7 @@
         // Label id belongs to user?
         $labelData = $Board->loadLabelDataByID($labelId);
         if (!$labelData['success']) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelData['message']]]);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelData['message']]]);
         } /* else {
             $labelInfo = $labelData['data'];
             // Use $labelInfo instead of $labelData['data'] in your form
@@ -46,28 +47,28 @@
         $labelColor = $_POST['labelcolor'] ?? null;
 
         if(strlen($labelName) <1) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Your label needs a name.']]);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Your label needs a name.']]);
         }
 
         if(strlen($labelName) > 25) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Label name is too long.']]);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Label name is too long.']]);
         }        
 
         if (!$labelColor || !preg_match($hexColorPattern, $labelColor)) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'You need to pick a color for the label.']]);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'You need to pick a color for the label.']]);
         }
 
         if(count($boardLabels) > _TASKBOARD_LABELS_MAXIMUM-1) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => _TASKBOARD_LABELS_MAXIMUM. ' labels are the maximum.']]);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => _TASKBOARD_LABELS_MAXIMUM. ' labels are the maximum.']]);
         }
 
 
         $labelResult = $Board->addLabel($user->getActiveTaskBoard(), $labelName, $labelColor);
 
         if ($labelResult['success']) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::TRIGGER_LABEL_FORM => true, \Dashboard\Core\HtmxEvents::SEARCH_LABEL_EDIT => true, \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $labelResult['message']]]);
+            triggerResponse([HtmxEvents::TRIGGER_LABEL_FORM => true, HtmxEvents::SEARCH_LABEL_EDIT => true, HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $labelResult['message']]]);
         } else {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelResult['message']]], false);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelResult['message']]], false);
         }
     }
 
@@ -79,23 +80,23 @@
         $labelColor = (isset($_POST['labelcolor']) ? $_POST['labelcolor']:null);
 
         if(strlen($labelName) <1) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Your label needs a name.']]); 
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Your label needs a name.']]); 
         }
 
         if(strlen($labelName) > 25) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Label name is too long.']]); 
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'Label name is too long.']]); 
         }
 
         if (!$labelColor || !preg_match($hexColorPattern, $labelColor)) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'You need to pick a color for the label.']]); 
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => 'You need to pick a color for the label.']]); 
         }
 
         $labelResult = $Board->editLabel($labelId, $labelName, $labelColor);
 
         if ($labelResult['success']) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, \Dashboard\Core\HtmxEvents::TRIGGER_LABEL_FORM => true, \Dashboard\Core\HtmxEvents::SEARCH_LABEL_EDIT => true, \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $labelResult['message']]]);
+            triggerResponse([HtmxEvents::TASK_BOARD_COLUMN_LIST => true, HtmxEvents::TRIGGER_LABEL_FORM => true, HtmxEvents::SEARCH_LABEL_EDIT => true, HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $labelResult['message']]]);
         } else {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelResult['message']]]);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelResult['message']]]);
         }  
     }
 
@@ -103,9 +104,9 @@
     if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'delete' && isset($_GET['labelid'])) {
         $labelData = $Board->deleteLabel($_GET['labelid']);
         if (!$labelData['success']) {
-            triggerResponse([\Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelData['message']]]);
+            triggerResponse([HtmxEvents::GLOBAL_MESSAGE => ['type' => 'error', 'message' => $labelData['message']]]);
         } else {
-            triggerResponse([\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, \Dashboard\Core\HtmxEvents::TRIGGER_LABEL_FORM => true, \Dashboard\Core\HtmxEvents::SEARCH_LABEL_EDIT => true, \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $labelData['message']]]);
+            triggerResponse([HtmxEvents::TASK_BOARD_COLUMN_LIST => true, HtmxEvents::TRIGGER_LABEL_FORM => true, HtmxEvents::SEARCH_LABEL_EDIT => true, HtmxEvents::GLOBAL_MESSAGE => ['type' => 'success', 'message' => $labelData['message']]]);
         }
     }
 ?>

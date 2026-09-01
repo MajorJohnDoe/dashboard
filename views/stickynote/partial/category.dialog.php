@@ -1,6 +1,8 @@
 <?php
 // categories.php
 
+use Dashboard\Core\HtmxEvents;
+
 $controller = new \Dashboard\Stickynote\StickyNoteController($db, $user);
 // Main page content
 $allCategories = $controller->getCategories();
@@ -12,23 +14,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create') {
         $result = $controller->handleCreateCategory();
         if ($result['success']) {
-            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+            triggerResponse(HtmxEvents::successResponse(
                 $result['message'] ?? 'Category created successfully',
-                ["refreshThisModal" => true, "triggerNoteCatlist" => true]
+                [
+                    HtmxEvents::REFRESH_THIS_MODAL => true,
+                    HtmxEvents::REFRESH_NOTE_CATEGORY_LIST => true,
+                ]
             ));
         } else {
-            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Failed to create category'));
+            triggerResponse(HtmxEvents::errorResponse($result['message'] ?? 'Failed to create category'));
         }
     } 
     elseif ($action === 'edit') {
         $result = $controller->handleEditCategory();
         if ($result['success']) {
-            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+            triggerResponse(HtmxEvents::successResponse(
                 $result['message'] ?? 'Category updated successfully',
-                ["refreshThisModal" => true, "triggerNoteCatlist" => true]
+                [
+                    HtmxEvents::REFRESH_THIS_MODAL => true,
+                    HtmxEvents::REFRESH_NOTE_CATEGORY_LIST => true,
+                ]
             ));
         } else {
-            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Failed to update category'));
+            triggerResponse(HtmxEvents::errorResponse($result['message'] ?? 'Failed to update category'));
         }
     }
 }
@@ -36,12 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     $result = $controller->handleDeleteCategory();
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+        triggerResponse(HtmxEvents::successResponse(
             $result['message'] ?? 'Category deleted successfully',
-            ["refreshThisModal" => true, "triggerNoteCatlist" => true]
+            [
+                HtmxEvents::REFRESH_THIS_MODAL => true,
+                HtmxEvents::REFRESH_NOTE_CATEGORY_LIST => true,
+            ]
         ));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Failed to delete category'));
+        triggerResponse(HtmxEvents::errorResponse($result['message'] ?? 'Failed to delete category'));
     }
 }
 
@@ -49,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 if (isset($_GET['action']) && $_GET['action'] === 'cancel') {
     // Return empty content to clear the edit form
     triggerResponse([
-        "refreshThisModal" => true
+        HtmxEvents::REFRESH_THIS_MODAL => true
     ]);
     exit;
 }

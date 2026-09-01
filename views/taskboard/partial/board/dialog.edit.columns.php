@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\ColumnController;
     
 // Initialize variables
@@ -13,12 +14,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_GET['action'] == 'new') {
     $result = $controller->handleCreateColumn($activeBoardId, "New column", 60);
 
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+        triggerResponse(HtmxEvents::successResponse(
             $result['message'],
-            [\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, "listBoardColumns" => true]
+            [HtmxEvents::TASK_BOARD_COLUMN_LIST => true, "listBoardColumns" => true]
         ));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'], ["listBoardColumns" => true]));
+        triggerResponse(HtmxEvents::errorResponse($result['message'], ["listBoardColumns" => true]));
     }
 }
 

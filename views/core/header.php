@@ -24,6 +24,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400..700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/htmx.org@1.9.11" defer></script>
+    <script>
+        // Event names emitted by \Dashboard\Core\HtmxEvents (classes/Core/HtmxEvents.class.php).
+        // Emitted server-side so PHP and JS can never drift apart.
+        window.HTMX_EVENTS = Object.freeze(<?= json_encode(\Dashboard\Core\HtmxEvents::all(), JSON_FORCE_OBJECT) ?>);
+    </script>
 </head>
 
 <body>

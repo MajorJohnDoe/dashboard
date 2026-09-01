@@ -5,6 +5,7 @@
  */
 
 use Dashboard\Core\CsrfProtection;
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Jobs\JobController;
 use Dashboard\Jobs\JobApplication;
 
@@ -37,22 +38,13 @@ $jobData = [
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE' || ($action === 'delete' && $jobId > 0)) {
     $result = $jobController->handleDeleteApplication($jobId);
     if ($result['success']) {
-        triggerResponse([
-            "refreshJobsList" => true,
-            "refreshJobStats" => true,
-            \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true,
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
-                'type' => 'success',
-                'message' => $result['message']
-            ]
-        ]);
+        triggerResponse(HtmxEvents::successResponse($result['message'], [
+            HtmxEvents::REFRESH_JOBS_LIST => true,
+            HtmxEvents::REFRESH_JOB_STATS => true,
+            HtmxEvents::CLOSE_MODAL => true,
+        ]));
     } else {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
-                'type' => 'error',
-                'message' => $result['message']
-            ]
-        ]);
+        triggerResponse(HtmxEvents::errorResponse($result['message']));
     }
 }
 
@@ -66,22 +58,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($result['success']) {
-        triggerResponse([
-            "refreshJobsList" => true,
-            "refreshJobStats" => true,
-            \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true,
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
-                'type' => 'success',
-                'message' => $result['message']
-            ]
-        ]);
+        triggerResponse(HtmxEvents::successResponse($result['message'], [
+            HtmxEvents::REFRESH_JOBS_LIST => true,
+            HtmxEvents::REFRESH_JOB_STATS => true,
+            HtmxEvents::CLOSE_MODAL => true,
+        ]));
     } else {
-        triggerResponse([
-            \Dashboard\Core\HtmxEvents::GLOBAL_MESSAGE => [
-                'type' => 'error',
-                'message' => $result['message']
-            ]
-        ]);
+        triggerResponse(HtmxEvents::errorResponse($result['message']));
     }
 }
 

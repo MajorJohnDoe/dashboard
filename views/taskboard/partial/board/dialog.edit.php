@@ -1,4 +1,5 @@
 <?php        
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\BoardController;
 
 // Initialize the controller
@@ -36,12 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+        triggerResponse(HtmxEvents::successResponse(
             $result['message'] ?? 'Operation successful',
-            [\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true]
+            [HtmxEvents::TASK_BOARD_COLUMN_LIST => true]
         ));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Operation failed'));
+        triggerResponse(HtmxEvents::errorResponse($result['message'] ?? 'Operation failed'));
     }
 }
 
@@ -51,15 +52,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
     $result = $controller->handleDeleteBoard($boardId);
 
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+        triggerResponse(HtmxEvents::successResponse(
             $result['message'] ?? 'Board deleted successfully',
             [
-                \Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
-                \Dashboard\Core\HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board"],
+                HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+                HtmxEvents::CLOSE_SPECIFIC_MODAL => ["dialog-board"],
             ]
         ));
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message'] ?? 'Failed to delete board'));
+        triggerResponse(HtmxEvents::errorResponse($result['message'] ?? 'Failed to delete board'));
     }
 }
 ?>

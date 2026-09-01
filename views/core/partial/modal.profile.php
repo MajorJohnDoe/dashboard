@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Core\UserController;
 
 $userController = new UserController($db, $user);
@@ -33,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($result['success']) {
-        triggerResponse(\Dashboard\Core\HtmxEvents::successResponse($result['message'], [\Dashboard\Core\HtmxEvents::REFRESH_PROFILE_MODAL => true]), false);
+        triggerResponse(HtmxEvents::successResponse($result['message'], [HtmxEvents::REFRESH_PROFILE_MODAL => true]), false);
     } else {
-        triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']), false);
+        triggerResponse(HtmxEvents::errorResponse($result['message']), false);
     }
 
 }

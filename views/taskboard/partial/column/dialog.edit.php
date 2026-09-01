@@ -1,4 +1,5 @@
 <?php    
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\ColumnController;
 
 // Assume we've already instantiated $db and $user objects
@@ -8,8 +9,8 @@ $postUrl = '';
 $formColumnName = '';
 $formColumnFlag = '0';
 $columnId = '';
-$columnTaskOrderBy = '';
-$formColumnDisplayTaskLimit = '';
+$formColumnTaskOrderBy = '0';
+$formColumnDisplayTaskLimit = '2';
 
 // GET, EDIT column data modal
 if (isset($_GET['action'], $_GET['column_id']) && $_GET['action'] == 'edit') {
@@ -20,7 +21,7 @@ if (isset($_GET['action'], $_GET['column_id']) && $_GET['action'] == 'edit') {
     
     if ($result['success']) {
         $columnData = $result['data'];
-        $formColumnName = $columnData['name'];;
+        $formColumnName = $columnData['name'];
         $formColumnFlag = $columnData['flag'];
         $formColumnTaskOrderBy = $columnData['orderBy'];
         $formColumnDisplayTaskLimit = $columnData['displayLimit'];
@@ -38,18 +39,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $columnTaskDisplayLimit = $_POST['column_display_limit'] ?? '2';
 
         if (strlen($columnTitle) < 2) {
-            triggerResponse(['globalMessagePopupUpdate' => ['type' => 'error', 'message' => 'Column title cannot be empty.']]);
+            triggerResponse(HtmxEvents::errorResponse('Column title cannot be empty.'));
         }
 
         $result = $columnController->updateColumnData($columnId, $columnTitle, $columnTaskOrderBy, $columnFlag, $columnTaskDisplayLimit);
 
         if ($result['success']) {
-            triggerResponse(['taskBoardColumnList' => true, 'globalMessagePopupUpdate' => ['type' => 'success', 'message' => $result['message']]]);
+            triggerResponse(HtmxEvents::successResponse($result['message'], [
+                HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+            ]));
         } else {
-            triggerResponse(['globalMessagePopupUpdate' => ['type' => 'error', 'message' => $result['error']]]);
+            triggerResponse(HtmxEvents::errorResponse($result['error']));
         }
     }
-} 
+}
 
 // Process DELETE requests
 // Delete column and its task children
@@ -59,9 +62,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'], $_GET['col
     $result = $columnController->deleteColumn($columnId);
 
     if ($result['success']) {
-        triggerResponse(['taskBoardColumnList' => true, 'closeModalEvent' => true, 'globalMessagePopupUpdate' => ['type' => 'success', 'message' => $result['message']]]);
+        triggerResponse(HtmxEvents::successResponse($result['message'], [
+            HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+            HtmxEvents::CLOSE_MODAL => true,
+        ]));
     } else {
-        triggerResponse(['globalMessagePopupUpdate' => ['type' => 'error', 'message' => $result['error']]]);
+        triggerResponse(HtmxEvents::errorResponse($result['error']));
     }
 }
 
@@ -147,7 +153,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'], $_GET['col
                                         <button hx-delete="<?=$postUrl?>" 
                                                 hx-target="body" 
                                                 hx-swap="beforeend" 
-                                                form="form_addTask" 
                                                 class="btn btn-light-gray btn-hover-red" 
                                                 tabindex="-1"
                                                 hx-confirm="Delete this column and all its tasks?">

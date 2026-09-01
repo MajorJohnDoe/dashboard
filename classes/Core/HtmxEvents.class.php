@@ -49,9 +49,73 @@ final class HtmxEvents
     /** A board was created or changed; refresh board lists */
     public const NEW_BOARD = 'newBoard';
 
+    /** Refresh the jobs list */
+    public const REFRESH_JOBS_LIST = 'refreshJobsList';
+
+    /** Refresh the job stats panel */
+    public const REFRESH_JOB_STATS = 'refreshJobStats';
+
+    /** Re-fetch the content of the modal the trigger originated from */
+    public const REFRESH_THIS_MODAL = 'refreshThisModal';
+
+    /** Refresh the sticky note category list */
+    public const REFRESH_NOTE_CATEGORY_LIST = 'triggerNoteCatlist';
+
     private function __construct()
     {
         // Static class - not instantiable
+    }
+
+    /**
+     * Build a CLOSE_SPECIFIC_MODAL trigger payload for the given modal IDs.
+     *
+     * @param string ...$modalIds IDs of the modal(s) to close, e.g. 'dialog-note'
+     * @return array Ready to merge into a trigger payload
+     */
+    public static function closeSpecificModal(string ...$modalIds): array
+    {
+        return [self::CLOSE_SPECIFIC_MODAL => array_values($modalIds)];
+    }
+
+    /**
+     * Build a GLOBAL_MESSAGE (toast) trigger payload.
+     *
+     * @param string $type    'success' or 'error'
+     * @param string $message Message shown in the toast
+     * @return array Ready to merge into a trigger payload
+     */
+    public static function globalMessage(string $type, string $message): array
+    {
+        return [self::GLOBAL_MESSAGE => ['type' => $type, 'message' => $message]];
+    }
+
+    /**
+     * Build a success toast trigger payload.
+     */
+    public static function successToast(string $message): array
+    {
+        return self::globalMessage('success', $message);
+    }
+
+    /**
+     * Build an error toast trigger payload.
+     */
+    public static function errorToast(string $message): array
+    {
+        return self::globalMessage('error', $message);
+    }
+
+    /**
+     * Return all event constants as a name => event-value map.
+     * Used to emit the JS-side window.HTMX_EVENTS object so PHP and JS
+     * can never drift apart.
+     *
+     * @return array<string, string>
+     */
+    public static function all(): array
+    {
+        $reflection = new \ReflectionClass(self::class);
+        return $reflection->getConstants();
     }
 
     /**

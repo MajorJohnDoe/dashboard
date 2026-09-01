@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\HtmxEvents;
     use Dashboard\Taskboard\ColumnController;
     use Dashboard\Taskboard\TaskController;
 
@@ -21,12 +22,12 @@
         $result = $task->handleDuplicateTask($columnId, $taskId);
 
         if ($result['success'] == true) {
-            triggerResponse(\Dashboard\Core\HtmxEvents::successResponse(
+            triggerResponse(HtmxEvents::successResponse(
                 $result['message'],
-                [\Dashboard\Core\HtmxEvents::TASK_BOARD_COLUMN_LIST => true, \Dashboard\Core\HtmxEvents::CLOSE_MODAL => true]
+                [HtmxEvents::TASK_BOARD_COLUMN_LIST => true, HtmxEvents::CLOSE_MODAL => true]
             ));
         } else {
-            triggerResponse(\Dashboard\Core\HtmxEvents::errorResponse($result['message']));
+            triggerResponse(HtmxEvents::errorResponse($result['message']));
         }
     }
 ?>

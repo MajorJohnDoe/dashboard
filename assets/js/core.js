@@ -1,21 +1,7 @@
 // Core JavaScript File
 
-// HTMX event names - must mirror \Dashboard\Core\HtmxEvents (classes/Core/HtmxEvents.class.php)
-const HTMX_EVENTS = Object.freeze({
-    TASK_BOARD_COLUMN_LIST: 'taskBoardColumnList',
-    CLOSE_MODAL: 'closeModalEvent',
-    CLOSE_SPECIFIC_MODAL: 'closeSpecificModalEvent',
-    REFRESH_MODAL: 'refreshModal',
-    REFRESH_TASK_HISTORY: 'refreshTaskHistory',
-    GLOBAL_MESSAGE: 'globalMessagePopupUpdate',
-    TRIGGER_NOTELIST: 'triggerNotelist',
-    TRIGGER_LABEL_FORM: 'triggerLabelForm',
-    SEARCH_LABEL_EDIT: 'search-label-edit',
-    REFRESH_PROFILE_MODAL: 'refreshProfileModal',
-    NOTIFICATIONS_UPDATE: 'notificationsUpdate',
-    REFRESH_NOTIFICATIONS_DIALOG: 'refreshNotificationsDialog',
-    NEW_BOARD: 'newBoard',
-});
+// HTMX event names come from window.HTMX_EVENTS, emitted server-side in
+// views/core/header.php from \Dashboard\Core\HtmxEvents (classes/Core/HtmxEvents.class.php).
 
 // Modal Management System
 const ModalManager = (() => {
