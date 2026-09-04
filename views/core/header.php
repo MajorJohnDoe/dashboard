@@ -62,6 +62,16 @@
                     History
                 </button>
             </li>
+            <li <?=($_SERVER['REQUEST_URI'] != '/board' ? 'style="display:none;"':'')?>>
+                <button 
+                    class="open-modal-btn btn btn-blue" 
+                    data-modal-target="#dialog-schedule-list"
+                    hx-get="/schedule/dialog/init" 
+                    hx-target="body" 
+                    hx-swap="beforeend">
+                    Recurring
+                </button>
+            </li>
             <li class="align-right">
                 <div class="notification-wrapper" style="position: relative;">
                     <button 

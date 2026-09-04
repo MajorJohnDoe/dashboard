@@ -9,14 +9,23 @@ const ModalManager = (() => {
 
     function handleModalOpen(event) {
         const openModalButton = event.target.closest('.open-modal-btn');
-        if (openModalButton) {
-            const modalSelector = openModalButton.dataset.modalTarget;
+        if (!openModalButton) return;
+
+        // Ignore clicks on interactive elements nested inside an
+        // .open-modal-btn (e.g. Pause/Delete inside a clickable schedule card)
+        // so both actions don't fire at once.
+        const interactive = event.target.closest('button, a, input, select, textarea, form');
+        if (interactive && interactive !== openModalButton && openModalButton.contains(interactive)) {
+            return;
+        }
+
+        const modalSelector = openModalButton.dataset.modalTarget;
+        if (modalSelector) {
             const modal = document.querySelector(modalSelector);
-            openModal(modal, event.clientX, event.clientY);
-            
-            if (modalSelector != undefined) {
-                activeModalId = modalSelector.substring(1);
+            if (modal) {
+                openModal(modal, event.clientX, event.clientY);
             }
+            activeModalId = modalSelector.startsWith('#') ? modalSelector.substring(1) : modalSelector;
         }
     }
 
@@ -773,6 +782,9 @@ const TableFilterManager = (() => {
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
+    if (typeof ContextMenuManager !== 'undefined') {
+        ContextMenuManager.init();
+    }
     ModalManager.init();
     SmallPopupManager.init();
     PanelModalManager.init();
@@ -790,7 +802,11 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Attach CSRF token to every HTMX request globally (from meta tag)
+// and flush TinyMCE editor content to textareas before form serialization
 document.body.addEventListener('htmx:configRequest', (event) => {
+    if (typeof tinymce !== 'undefined') {
+        tinymce.triggerSave();
+    }
     const meta = document.querySelector('meta[name="csrf-token"]');
     if (meta && meta.content) {
         event.detail.headers['X-CSRF-Token'] = meta.content;

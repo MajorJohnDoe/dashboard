@@ -16,6 +16,8 @@ class Task {
     private $taskCreated;
     private $taskSelectedLabels;
     private $taskResolvedDate;
+    /** @var int|null ID of the recurring schedule that owns/spawned this task */
+    private $scheduleId;
 
     public function __construct(DatabaseInterface $db) {
         $this->db = $db;
@@ -51,6 +53,7 @@ class Task {
         $this->taskChecklist = $data['task_checklist'];
         $this->taskPriority = $data['task_priority'];
         $this->taskResolvedDate = $data['task_resolved_date'];
+        $this->scheduleId = isset($data['schedule_id']) ? (int)$data['schedule_id'] : null;
     }
 
     public function createTask($userId, $columnId, $taskTitle, $taskDesc, $taskPriority, $checklistJSON = null, $taskLabels = null) {
@@ -302,6 +305,30 @@ class Task {
     public function getTaskPriority() { return $this->taskPriority; }
     public function getTaskLabels() { return $this->taskSelectedLabels; }
     public function getTaskResolvedDate() { return $this->taskResolvedDate; }
+    public function getTaskBoardId() { return $this->boardId; }
+    public function getTaskColumnId() { return $this->columnId; }
+    /** @return int Linked recurring schedule id, or 0 when the task is not recurring. */
+    public function getTaskScheduleId(): int { return (int)($this->scheduleId ?? 0); }
+
+    /**
+     * Link a task to a recurring schedule (the task becomes an occurrence).
+     *
+     * @param int $taskId
+     * @param int $scheduleId
+     * @return bool
+     */
+    public function linkToSchedule(int $taskId, int $scheduleId): bool {
+        $result = $this->db->q(
+            "UPDATE `tm_task` SET `schedule_id` = ?, `task_modified` = NOW() WHERE `task_id` = ?",
+            'ii',
+            $scheduleId,
+            $taskId
+        );
+        if ($result !== false && $taskId === (int)$this->taskId) {
+            $this->scheduleId = $scheduleId;
+        }
+        return $result !== false;
+    }
 
 
     public function getChecklistCompletionRate() {

@@ -25,12 +25,20 @@ class TaskboardRoutes extends AbstractRouteRegistrar {
 
         // Task management
         $this->router->addRoutes([
+            // Delete confirmation dialog (context menu) — must be registered
+            // before the wildcard /task/dialog/:action/... routes below.
+            ['GET', '/task/dialog/delete-confirm/:column_id/:task_id', 'taskboard/partial/task/dialog.delete.confirm', 'type' => 'partial', 'middleware' => $this->auth()],
             [['GET', 'POST'], '/task/dialog/:action/:column_id', 'taskboard/partial/task/dialog.edit', 'type' => 'partial', 'middleware' => $this->auth()],
             [['GET', 'POST', 'DELETE'], '/task/dialog/:action/:column_id/:task_id', 'taskboard/partial/task/dialog.edit', 'type' => 'partial', 'middleware' => $this->auth()],
             [['GET', 'POST'], '/task/label/search', 'taskboard/partial/task/label.search', 'type' => 'partial', 'middleware' => $this->auth()],
             [['GET', 'POST'], '/task/duplicate/:action/:taskid', 'taskboard/partial/task/dialog.edit.duplicate', 'type' => 'partial', 'middleware' => $this->auth()],
             ['GET', '/task/checklist/:action/:task_id', 'taskboard/partial/task/dialog.edit.checklist', 'type' => 'partial', 'middleware' => $this->auth()],
             ['POST', '/task/move-to-column', 'Taskboard\TaskController@handleDragAndDropTaskColumns', 'type' => 'partial', 'middleware' => $this->auth()],
+            // Quick priority change (context menu)
+            ['POST', '/task/priority/:task_id', 'Taskboard\TaskController@handleSetPriorityRequest', 'type' => 'partial', 'middleware' => $this->auth()],
+            // Recurring schedule panel (opened from task edit modal / context menu)
+            ['GET', '/task/recurrence/panel/:task_id', 'taskboard/partial/schedule/panel.recurrence', 'type' => 'partial', 'middleware' => $this->auth()],
+            ['POST', '/task/recurrence/save/:task_id', 'taskboard/partial/schedule/panel.recurrence', 'type' => 'partial', 'middleware' => $this->auth()],
         ]);
 
         // Board management
@@ -54,6 +62,15 @@ class TaskboardRoutes extends AbstractRouteRegistrar {
         $this->router->addRoutes([
             ['GET', '/calendar/dialog/init/:init', 'taskboard/partial/calendar/dialog', 'type' => 'partial', 'middleware' => $this->auth()],
             ['GET', '/calendar/dialog/date/:date', 'taskboard/partial/calendar/dialog', 'type' => 'partial', 'middleware' => $this->auth()],
+        ]);
+
+        // Scheduled (recurring) tasks
+        $this->router->addRoutes([
+            ['GET', '/schedule/dialog/init', 'taskboard/partial/schedule/dialog.list', 'type' => 'partial', 'middleware' => $this->auth()],
+            [['GET', 'POST'], '/schedule/dialog/new/:board_id', 'taskboard/partial/schedule/dialog.edit', 'type' => 'partial', 'middleware' => $this->auth()],
+            [['GET', 'POST'], '/schedule/dialog/edit/:board_id/:schedule_id', 'taskboard/partial/schedule/dialog.edit', 'type' => 'partial', 'middleware' => $this->auth()],
+            ['POST', '/schedule/toggle/:schedule_id', 'taskboard/partial/schedule/dialog.list', 'type' => 'partial', 'middleware' => $this->auth()],
+            ['DELETE', '/schedule/delete/:schedule_id', 'taskboard/partial/schedule/dialog.list', 'type' => 'partial', 'middleware' => $this->auth()],
         ]);
     }
 }

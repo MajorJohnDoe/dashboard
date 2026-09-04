@@ -313,3 +313,200 @@ const EventManager = (() => {
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', EventManager.init);
+
+// ============================================================================
+// Task context menu (right-click)
+// Uses the reusable ContextMenuManager (assets/js/context.menu.js).
+// ============================================================================
+
+const TaskContextMenu = (() => {
+    const PRIORITY_LABELS = ['Lowest', 'Low', 'Alarming', 'Critical', 'Highest'];
+
+    /**
+     * Open a modal by fetching its HTML into <body> — the same pattern used by
+     * the label editor and delete-task flows (hx-target="body" beforeend).
+     * Inline <script> tags in the fetched HTML are executed manually
+     * (insertAdjacentHTML does not run them); htmx.process picks up any
+     * hx-* attributes.
+     * @param {string} url
+     * @param {Object} [opts] { wrap: bool } wrap the response in a standard
+     *   modal-container (for partials that are bare forms, e.g. duplicate).
+     */
+    async function openModalFromUrl(url, opts = {}) {
+        try {
+            const response = await fetch(url, { headers: { 'X-CSRF-Token': Csrf.getToken() } });
+            if (!response.ok) {
+                Http.toastError('Could not open dialog (HTTP ' + response.status + ')');
+                return;
+            }
+            let html = await response.text();
+
+            if (opts.wrap) {
+                html =
+                    '<div class="modal-container show" style="display:flex;">' +
+                    '<div class="dialog dialog-sm">' +
+                    '<div class="dialog-header"><span>Duplicate task</span>' +
+                    '<button class="close-modal-btn btn">X</button></div>' +
+                    '<div class="formOuter">' + html + '</div></div></div>';
+            }
+
+            // Extract the partial's inline scripts (panel open/close behaviour,
+            // dialog auto-open) and strip them from the HTML so no inert
+            // <script> tags are ever inserted into <body>.
+            const range = document.createRange();
+            const fragment = range.createContextualFragment(html);
+            const scriptContents = [];
+            fragment.querySelectorAll('script').forEach(oldScript => {
+                scriptContents.push(oldScript.textContent);
+                oldScript.remove(); // stripped before insertion
+            });
+            // Serialize the script-less remainder back to HTML.
+            const holder = document.createElement('div');
+            holder.appendChild(fragment);
+            html = holder.innerHTML;
+
+            // Insert the markup FIRST, then execute the scripts — the panel's
+            // inline script calls SlideOutPanel.setup(), which needs its
+            // <aside> to already be in the DOM (getElementById lookup).
+            document.body.insertAdjacentHTML('beforeend', html);
+
+            // Remember what we inserted: setup() may MOVE the last element
+            // (slide panels relocate themselves into their host dialog), so
+            // body.lastElementChild can no longer be trusted afterwards.
+            const inserted = document.body.lastElementChild;
+
+            scriptContents.forEach(content => {
+                const script = document.createElement('script');
+                script.textContent = content;
+                document.body.appendChild(script); // executing insert
+                script.remove();
+            });
+
+            if (typeof htmx !== 'undefined') {
+                // Process the element we inserted (or its current parent
+                // subtree if a script relocated it), NOT body.lastElementChild.
+                const target = inserted.isConnected ? inserted : document.body.lastElementChild;
+                htmx.process(target);
+            }
+        } catch (error) {
+            Http.toastError('Network error');
+        }
+    }
+
+    /**
+     * POST a quick action with CSRF header; server responses drive the
+     * UI via HX-Trigger events (board refresh, toasts).
+     */
+    async function sendRequest(url, method, body) {
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'X-CSRF-Token': Csrf.getToken(),
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: body ? new URLSearchParams(body).toString() : null,
+            });
+            if (!response.ok) {
+                Http.toastError('Request failed (HTTP ' + response.status + ')');
+                return;
+            }
+            // triggerResponse endpoints return JSON with an HX-Trigger header;
+            // fire the events manually so toasts/board refresh happen.
+            const triggerHeader = response.headers.get('HX-Trigger');
+            if (triggerHeader) {
+                try {
+                    const triggers = JSON.parse(triggerHeader);
+                    Object.entries(triggers).forEach(([eventName, detail]) => {
+                        document.body.dispatchEvent(new CustomEvent(eventName, { detail }));
+                    });
+                } catch (parseError) {
+                    console.error('Invalid HX-Trigger header', parseError);
+                }
+            }
+        } catch (error) {
+            Http.toastError('Network error');
+        }
+    }
+
+    function getTaskId(taskEl) {
+        return taskEl ? taskEl.dataset.id : null;
+    }
+
+    function getColumnId(taskEl) {
+        const column = taskEl ? taskEl.closest('.task-column') : null;
+        return column ? column.dataset.columnId : null;
+    }
+
+    function openEditDialog(taskEl) {
+        openModalFromUrl('/task/dialog/edit/' + getColumnId(taskEl) + '/' + getTaskId(taskEl));
+    }
+
+    function openDuplicateDialog(taskEl) {
+        openModalFromUrl('/task/duplicate/dupe/' + getTaskId(taskEl), { wrap: true });
+    }
+
+    function openRecurrencePanel(taskEl) {
+        openModalFromUrl('/task/recurrence/panel/' + getTaskId(taskEl));
+    }
+
+    function confirmDelete(taskEl) {
+        const taskId = getTaskId(taskEl);
+        const columnId = getColumnId(taskEl);
+        openModalFromUrl('/task/dialog/delete-confirm/' + columnId + '/' + taskId);
+    }
+
+    function setPriority(taskEl, priority) {
+        sendRequest('/task/priority/' + getTaskId(taskEl), 'POST', { task_priority: priority });
+    }
+
+    /**
+     * Build the task menu items. Function form so each open reflects the
+     * current element.
+     */
+    function buildItems(taskEl) {
+        return [
+            { id: 'edit', label: 'Edit', icon: 'fa-pencil', action: openEditDialog },
+            { id: 'duplicate', label: 'Duplicate', icon: 'fa-files-o', action: openDuplicateDialog },
+            { id: 'recurring', label: 'Make recurring', icon: 'fa-repeat', action: openRecurrencePanel },
+            { separator: true },
+            {
+                id: 'priority',
+                label: 'Change priority',
+                icon: 'fa-flag',
+                submenu: PRIORITY_LABELS.map((name, value) => ({
+                    id: 'priority-' + value,
+                    label: name,
+                    action: () => setPriority(taskEl, value),
+                })),
+            },
+            { separator: true },
+            { id: 'delete', label: 'Delete task', icon: 'fa-trash-o', danger: true, action: confirmDelete },
+        ];
+    }
+
+    function init() {
+        if (typeof ContextMenuManager === 'undefined') return;
+        ContextMenuManager.register('.tm-task', buildItems);
+        attachRecurrenceButtonHandler();
+    }
+
+    /**
+     * "Make recurring" button inside the task edit modal. Delegated on body
+     * (the modal content is swapped dynamically). Uses openModalFromUrl so
+     * the response's inline scripts are executed and stripped — a plain
+     * htmx swap would leave inert <script> tags in the DOM.
+     */
+    function attachRecurrenceButtonHandler() {
+        document.body.addEventListener('click', (e) => {
+            const btn = e.target.closest('#make-recurring-btn');
+            if (!btn || !btn.dataset.recurrenceUrl) return;
+            e.preventDefault();
+            openModalFromUrl(btn.dataset.recurrenceUrl);
+        });
+    }
+
+    return { init };
+})();
+
+document.addEventListener('DOMContentLoaded', TaskContextMenu.init);

@@ -180,7 +180,8 @@ CREATE TABLE `tm_task` (
   `task_priority` tinyint(1) NOT NULL DEFAULT 0,
   `task_created` datetime NOT NULL,
   `task_modified` datetime DEFAULT NULL,
-  `task_resolved_date` datetime DEFAULT NULL COMMENT 'If column has "resolved flag" set datetime'
+  `task_resolved_date` datetime DEFAULT NULL COMMENT 'If column has "resolved flag" set datetime',
+  `schedule_id` int(11) DEFAULT NULL COMMENT 'Schedule that spawned this task (tm_task_schedule.schedule_id)'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 INSERT INTO `tm_task` (`task_id`, `board_id`, `column_id`, `task_title`, `task_desc`, `task_checklist`, `task_priority`, `task_created`, `task_modified`, `task_resolved_date`) VALUES
@@ -199,6 +200,8 @@ CREATE TABLE `tm_task_label_rel` (
   `task_id` int(11) NOT NULL,
   `label_id` int(11) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 
 
 INSERT INTO `tm_task_label_rel` (`id`, `task_id`, `label_id`) VALUES
@@ -248,6 +251,37 @@ INSERT INTO `user_session` (`id`, `session`, `token`, `userid`, `sess_start`, `s
 (157, 'eeea4ed271e3234d583416a7713490d6', 'a7049ff9caa4bd834b661f69759e7d496236a18384c676d44b02500df4298dbb', 3831, '2024-09-24 10:06:33', '2024-10-24 10:06:33', '2024-09-24 10:06:33', '172.55.0.3', NULL);
 
 
+
+CREATE TABLE `tm_task_schedule` (
+  `schedule_id` int(11) NOT NULL,
+  `board_id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL COMMENT 'Creator of the schedule',
+  `column_id` int(11) NOT NULL COMMENT 'Target column for spawned tasks',
+  `task_title` varchar(100) NOT NULL,
+  `task_desc` mediumtext NOT NULL,
+  `task_checklist` text DEFAULT NULL COMMENT 'JSON: [{"description","status"}]',
+  `task_priority` tinyint(1) NOT NULL DEFAULT 0,
+  `labels` text DEFAULT NULL COMMENT 'JSON array of tm_label ids',
+  `frequency` ENUM('daily','weekly','monthly','yearly') NOT NULL DEFAULT 'daily',
+  `interval` int(11) NOT NULL DEFAULT 1 COMMENT 'Run every N periods',
+  `weekdays` varchar(20) DEFAULT NULL COMMENT 'CSV of weekday numbers 0=Sun..6=Sat (weekly)',
+  `month_day` tinyint(4) DEFAULT NULL COMMENT 'Day of month 1-31 (monthly/yearly)',
+  `nth_weekday` varchar(10) DEFAULT NULL COMMENT 'Nth weekday as "nth:weekday", e.g. "2:2" = 2nd Tuesday (monthly)',
+  `start_date` date NOT NULL,
+  `end_type` ENUM('never','count','date') NOT NULL DEFAULT 'never',
+  `end_count` int(11) DEFAULT NULL COMMENT 'Stop after N runs (end_type=count)',
+  `only_if_completed` tinyint(1) NOT NULL DEFAULT 0 COMMENT '1 = only spawn next task if previous spawned task was resolved',
+  `end_date` date DEFAULT NULL COMMENT 'Stop after this date (end_type=date)',
+  `next_run` datetime DEFAULT NULL,
+  `last_run` datetime DEFAULT NULL,
+  `run_count` int(11) NOT NULL DEFAULT 0,
+  `is_active` tinyint(1) NOT NULL DEFAULT 1,
+  `created` datetime NOT NULL,
+  `modified` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+
 ALTER TABLE `shared_item_images`
   ADD PRIMARY KEY (`id`),
   ADD KEY `item_id` (`item_id`),
@@ -277,11 +311,16 @@ ALTER TABLE `tm_label` ADD FULLTEXT KEY `label_name` (`label_name`);
 
 ALTER TABLE `tm_task`
   ADD PRIMARY KEY (`task_id`),
-  ADD KEY `todo_list_id` (`board_id`,`column_id`);
+  ADD KEY `todo_list_id` (`board_id`,`column_id`),
+  ADD KEY `schedule_id` (`schedule_id`);
 
 ALTER TABLE `tm_task_label_rel`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `task_id` (`task_id`,`label_id`);
+
+ALTER TABLE `tm_task_schedule`
+  ADD PRIMARY KEY (`schedule_id`),
+  ADD KEY `board_active_next_run` (`board_id`,`is_active`,`next_run`);
 
 ALTER TABLE `user`
   ADD PRIMARY KEY (`user_id`),
@@ -315,6 +354,9 @@ ALTER TABLE `tm_task`
 
 ALTER TABLE `tm_task_label_rel`
   MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2088;
+
+ALTER TABLE `tm_task_schedule`
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT;
 
 ALTER TABLE `user`
   MODIFY `user_id` mediumint(8) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3832;

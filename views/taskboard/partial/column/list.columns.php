@@ -1,6 +1,17 @@
 <?php
 use Dashboard\Taskboard\ColumnController;
 use Dashboard\Taskboard\TaskController;
+use Dashboard\Taskboard\TaskScheduleController;
+
+// Lazy execution of due recurring-task schedules. Runs before rendering so
+// freshly spawned tasks appear immediately. Silently skipped on failure.
+try {
+    $scheduleController = new TaskScheduleController($db, $user);
+    $scheduleController->runDueSchedules((int)$user->getActiveTaskBoard());
+    unset($scheduleController);
+} catch (\Exception $e) {
+    error_log("Schedule catch-up skipped: " . $e->getMessage());
+}
 
 // Assume we've already instantiated $db and $user objects
 $columnController = new ColumnController($db, $user);
@@ -40,7 +51,7 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
     echo '<div class="columns-container">';
             
     foreach ($columnsResult['columns'] as $column) {
-        echo '  <div id="column-' . $column['id'] . '" class="task-column">';
+        echo '  <div id="column-' . $column['id'] . '" class="task-column" data-column-id="' . $column['id'] . '">';
         echo '      <div class="column-header">';
         echo '          <div class="column-name">' . htmlspecialchars(html_entity_decode($column['column_name'])) . '</div>';
         echo '          <div class="column-icons">';
@@ -89,6 +100,9 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
                 }
 
                 $taskPriorityClass = $priorityClasses[$task['task_priority']] ?? 'priority-lowest';
+                $recurringIcon = !empty($task['schedule_id'])
+                    ? ' <i class="fa fa-repeat tm-task-recurring-icon" title="Recurring task"></i>'
+                    : '';
 
                 echo '<li 
                         class="tm-task ' . $taskPriorityClass . ' open-modal-btn"
@@ -100,7 +114,7 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
                 echo '<div class="flex-table">
                         <div class="flex-row">
                             <div class="flex-cell flex-cell-vcenter" style="padding: 0px;">
-                                <div class="title">' . htmlspecialchars(html_entity_decode($task['task_title'])) . '</div>
+                                <div class="title">' . htmlspecialchars(html_entity_decode($task['task_title'])) . $recurringIcon . '</div>
                                 ' . (!empty($taskSelectedLabels) ? '<div class="labels">' . $taskLabels . '</div>' : '') . '
                             </div>
                             <div class="flex-cell flex-cell-shrink">

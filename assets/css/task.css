@@ -246,12 +246,20 @@
     display: none;
 }
 
-#selectedLabelsContainer span { 
-    margin: 0.2rem 0.3rem 0.2rem 0;
+/* Selected labels chips. The container is a flexbox so whitespace in the
+   markup (newlines/indentation between chips) can't create gaps — spacing
+   is controlled by `gap` alone. */
+#selectedLabelsContainer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+}
+
+#selectedLabelsContainer span {
     padding: 0.185rem 0.4375rem;
     font-weight: 600;
     border-radius: 0.3rem;
-    display: inline-block;
 }
 
 /* Column list in edit board dialog */
@@ -714,5 +722,540 @@
     .tm-task .labels div {
         font-size: 85%;
         padding: 0.1rem 0.4rem;
+    }
+}
+
+
+/* ==========================================================================
+   Recurring (scheduled) tasks
+   List dialog + edit dialog recurrence rule styles.
+   ========================================================================== */
+
+/* --- List dialog: 4-column schedule board (Daily/Weekly/Monthly/Yearly) ---
+   Acts as a subpage-inside-a-modal: fills 90% of the viewport, columns run
+   full height with sticky headers and independent scrolling. */
+.schedule-dialog {
+    width: 90%;
+    height: 90%;
+    overflow: hidden;
+}
+
+.schedule-dialog .formOuter {
+    padding: 0.75rem;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden; /* the board handles scrolling, not the wrapper */
+    container-type: inline-size;
+}
+
+.schedule-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.75rem;
+    align-items: stretch;
+    height: 100%;
+}
+
+/* Column shell: full height, own scroll region, mimics .task-column look */
+.schedule-column {
+    display: flex;
+    flex-direction: column;
+    background: #f0f2f5;
+    border-radius: 0.6rem;
+    padding: 0.5rem;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.schedule-column-header {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.4rem 0.55rem;
+    font-weight: 700;
+    color: #3d4757;
+    flex: 0 0 auto;
+}
+
+.schedule-column-icon {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.schedule-column-title {
+    flex: 1;
+}
+
+.schedule-column-count {
+    display: inline-block;
+    min-width: 1.4rem;
+    text-align: center;
+    padding: 0.05rem 0.4rem;
+    border-radius: 999px;
+    background: #dde3ea;
+    color: #556;
+    font-size: 0.8em;
+    font-weight: 700;
+}
+
+.schedule-column-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0.15rem;
+    /* room for card hover shadows */
+    scrollbar-width: thin;
+}
+
+.schedule-column-empty {
+    padding: 1.2rem 0.5rem;
+    text-align: center;
+    font-size: 0.85em;
+    color: #9aa1ac;
+    border: 1px dashed #d3d8df;
+    border-radius: 0.5rem;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Schedule card — reuses .tm-task from the kanboard for base look.
+   Only schedule-specific additions live here. */
+.schedule-card {
+    flex: 0 0 auto;
+    display: block; /* .tm-task is a flex row; cards here are stacked content */
+}
+
+.schedule-card-paused {
+    opacity: 0.65;
+}
+
+.schedule-card-paused .title {
+    color: #777;
+}
+
+/* Status dot */
+.schedule-status-dot {
+    display: inline-block;
+    width: 0.55rem;
+    height: 0.55rem;
+    border-radius: 50%;
+    margin-right: 0.3rem;
+}
+
+.schedule-status-active {
+    background: #45b475;
+    box-shadow: 0 0 0 3px rgba(69, 180, 117, 0.16);
+}
+
+.schedule-status-paused {
+    background: #b8b8c0;
+    box-shadow: 0 0 0 3px rgba(184, 184, 192, 0.16);
+}
+
+/* Meta line */
+.schedule-card-sub {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem 0.7rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+    font-size: 0.78em;
+    color: inherit;
+    opacity: 0.75;
+}
+
+.schedule-next strong {
+    font-weight: 600;
+}
+
+.schedule-end,
+.schedule-count {
+    white-space: nowrap;
+}
+
+.schedule-rule-text {
+    font-size: 0.8em;
+    opacity: 0.85;
+    margin-top: 0.2rem;
+    line-height: 1.3;
+}
+
+.tm-task-recurring-icon {
+    font-size: 0.8em;
+    opacity: 0.65;
+    margin-left: 0.3rem;
+    vertical-align: middle;
+}
+
+.schedule-paused-label {
+    font-style: italic;
+}
+
+/* Actions row */
+.schedule-card-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    margin-top: 0.55rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.schedule-card-actions form {
+    display: inline;
+}
+
+.schedule-card-actions .btn {
+    padding: 0.25rem 0.55rem;
+    font-size: 0.8em;
+}
+
+/* Empty state (whole board) */
+.schedule-empty-state {
+    text-align: center;
+    padding: 2.5rem 1rem;
+    color: #666;
+    border: 1px dashed #d5d5de;
+    border-radius: 0.6rem;
+    margin-top: 0.75rem;
+}
+
+.schedule-empty-state p:first-child {
+    font-weight: 600;
+    font-size: 1.05em;
+    color: #333;
+    margin-bottom: 0.3rem;
+}
+
+/* Footer hint */
+.schedule-footer-hint {
+    font-size: 0.85em;
+    color: #8a93a0;
+}
+
+/* Subpage-style footer: pinned bar with top border */
+.schedule-dialog .form-actions {
+    border-top: 1px solid #e8e8ee;
+    padding: 0.65rem 0.9rem;
+    flex: 0 0 auto;
+}
+
+/* Header uses core .dialog-header from layout.css - no overrides needed */
+
+/* Stack columns on narrow screens (responsive container query with media query fallback) */
+@container (max-width: 900px) {
+    .schedule-board {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@container (max-width: 500px) {
+    .schedule-board {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 1100px) {
+    .schedule-board {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .schedule-board {
+        grid-template-columns: 1fr;
+    }
+}
+/* --- Edit dialog: recurrence rule sidebar --- */
+
+
+
+/* --- Segmented control (connected button bar, green active segment).
+   Styled to match the reference mockup: white segments, light gray
+   outer border, bright green active segment. --- */
+.segmented {
+    display: flex;
+    width: 100%;
+}
+
+.segmented > input[type="radio"],
+.segmented > input[type="checkbox"] {
+    /* Keep input in flow for :checked sibling styling but visually hidden */
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+}
+
+.segmented > label {
+    flex: 1 1 0;
+    text-align: center;
+    padding: 0.55rem 0.2rem;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.9rem;
+    line-height: 1.2;
+    background: #ffffff;
+    border: 1px solid #d3d7dc;
+    border-inline-end-width: 0;
+    color: #33393f;
+    user-select: none;
+    transition: background 0.12s ease, color 0.12s ease;
+}
+
+.segmented > label:first-of-type {
+    border-start-start-radius: 0.5rem;
+    border-end-start-radius: 0.5rem;
+}
+
+.segmented > label:last-of-type {
+    border-inline-end-width: 1px;
+    border-start-end-radius: 0.5rem;
+    border-end-end-radius: 0.5rem;
+}
+
+@media (hover: hover) {
+    .segmented > label:hover { background: #f3f4f6; }
+}
+
+.segmented > input:checked + label {
+    background: var(--pill-green-bg);
+    color: var(--pill-green-fg);
+    font-weight: 700;
+}
+
+.segmented > input:focus-visible + label {
+    outline: 2px solid var(--pill-green-bg);
+    outline-offset: 1px;
+}
+
+/* Frequency bar: equal segments */
+.segmented-frequency > label {
+    flex: 1 1 0;
+}
+
+/* Weekday bar: compact equal segments */
+.segmented-weekdays {
+    margin-top: 0.35rem;
+}
+
+.segmented-weekdays > label {
+    flex: 1 1 0;
+    padding: 0.5rem 0.1rem;
+    font-size: 0.85rem;
+}
+
+/* "Every N weeks" row */
+.schedule-interval-row {
+    margin-top: 0.35rem;
+}
+
+.schedule-interval-row input[type="number"] {
+    width: 4.5rem;
+    padding: 0.4rem 0.5rem;
+    background: #ffffff;
+    border: 1px solid #d3d7dc;
+    border-radius: 0.5rem;
+    color: #33393f;
+}
+
+.schedule-interval-row label {
+    font-weight: 500;
+}
+
+/* "Only if last task was completed" checkbox row — green squared check */
+.schedule-completed-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.5rem;
+}
+
+
+.schedule-completed-row label {
+    cursor: pointer;
+    font-weight: 500;
+    color: #33393f;
+    font-size: 0.95rem;
+}
+
+/* "Stop creating new copies": vertical radio list with inline inputs */
+.schedule-end-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+    margin-top: 0.5rem;
+}
+
+.schedule-end-option {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+
+
+.schedule-end-option > label {
+    cursor: pointer;
+    font-weight: 500;
+    color: #33393f;
+    font-size: 0.95rem;
+    min-width: 3.4rem;
+}
+
+.schedule-end-option .schedule-end-input {
+    margin-top: 0;
+    flex: 1;
+}
+
+.schedule-end-option .schedule-end-input input[type="number"],
+.schedule-end-option .schedule-end-input input[type="date"] {
+    padding: 0.4rem 0.6rem;
+    background: #ffffff;
+    border: 1px solid #d3d7dc;
+    border-radius: 0.5rem;
+    color: #33393f;
+}
+
+/* Inline number/date inputs with unit labels */
+.schedule-interval-row,
+.schedule-end-input {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.3rem;
+}
+
+.schedule-interval-row input[type="number"],
+.schedule-end-input input[type="number"] {
+    width: 5rem;
+}
+
+.schedule-end-input input[type="date"] {
+    flex: 1;
+}
+
+.schedule-interval-unit {
+    color: #666;
+    font-size: 0.9em;
+}
+
+/* Monthly pickers stack with a hint */
+.schedule-nth-select {
+    margin-top: 0.3rem;
+}
+
+.schedule-monthly-hint {
+    display: block;
+    font-weight: 400;
+    font-size: 0.78em;
+    color: #888;
+    margin-top: 0.3rem;
+}
+
+/* =============================================================
+   Slide-out panel component (SlideOutPanel, assets/js/slide.panel.js)
+   A panel that slides out from the right edge of an anchor element
+   (e.g. the task edit dialog) instead of the browser edge. Falls back
+   to the browser edge when the dialog isn't visible (small screens).
+   Currently used by panel.recurrence.php.
+   ============================================================= */
+
+.slide-panel-host {
+    /* Anchor for the panel: the dialog becomes position: relative so the
+       panel can be an absolutely positioned child at its right edge. */
+    position: relative;
+}
+
+.slide-panel {
+    /* Lives INSIDE the host dialog (moved there by SlideOutPanel.setup).
+       left: 100% tracks the dialog's right edge automatically — no JS
+       measuring needed. z-index: -1 puts it underneath the dialog, so it
+       slides out from behind it. It escapes the dialog's box only because
+       the dialog has no overflow clipping (overflow: hidden is commented
+       out in layout.css). */
+    position: absolute;
+    left: 100%;
+    top: 0;
+    height: 100%;
+    width: 26rem;
+    max-width: calc(100vw - 100%);
+    z-index: -1;
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    border-radius: 0 0.5rem 0.5rem 0;
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+}
+
+.slide-panel.slide-panel-open {
+    transform: translateX(0);
+}
+
+/* Standalone mode: no visible host dialog (panel opened from the task
+   context menu), so the panel is hosted on <body> and anchored to the
+   browser's right edge as a fixed full-height drawer. max-width must be
+   overridden: the base calc(100vw - 100%) computes to 0 for fixed elements
+   (100% resolves against the viewport). color: labels otherwise inherit
+   the dark-theme --text-light from <body> instead of the dialog's font
+   color. Slides in right-to-left (from off-screen right edge). */
+.slide-panel.slide-panel-standalone {
+    position: fixed;
+    left: auto;
+    right: 0;
+    top: 0;
+    height: 100dvh;
+    max-width: 100vw;
+    z-index: 1000;
+    border-radius: 0;
+    color: var(--font-color);
+    transform: translateX(100%);
+}
+
+.slide-panel.slide-panel-standalone.slide-panel-open {
+    transform: translateX(0);
+}
+
+.slide-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.9rem 1.2rem;
+    border-bottom: 1px solid #e5e5e5;
+    font-weight: 600;
+}
+
+.slide-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem 1.2rem;
+}
+
+.slide-panel-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    padding: 0.9rem 1.2rem;
+    border-top: 1px solid #e5e5e5;
+}
+
+.slide-panel-hint {
+    font-size: 0.85em;
+    color: #666;
+    margin: 0 0 1rem;
+}
+
+@media (max-width: 480px) {
+    .slide-panel {
+        width: 100vw;
+        max-width: 100vw;
     }
 }

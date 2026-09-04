@@ -61,6 +61,12 @@ final class HtmxEvents
     /** Refresh the sticky note category list */
     public const REFRESH_NOTE_CATEGORY_LIST = 'triggerNoteCatlist';
 
+    /** Refresh the scheduled-tasks (recurring) list dialog */
+    public const REFRESH_SCHEDULE_LIST = 'refreshScheduleList';
+
+    /** Close the recurring-schedule slide-out panel (panel.recurrence) */
+    public const CLOSE_RECURRENCE_PANEL = 'closeRecurrencePanel';
+
     private function __construct()
     {
         // Static class - not instantiable

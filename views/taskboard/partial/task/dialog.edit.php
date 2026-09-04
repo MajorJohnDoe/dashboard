@@ -22,6 +22,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
             $taskPriority = $taskData['priority'];
             $taskSelectLabels = $taskData['labels'];
             $taskIsResolved = $taskData['resolved_date'];
+            $taskScheduleId = (int)($taskData['schedule_id'] ?? 0);
         }
     }
 
@@ -58,6 +59,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                 [
                     HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
                     HtmxEvents::CLOSE_MODAL => true,
+                    HtmxEvents::CLOSE_SPECIFIC_MODAL => ['dialog-task-delete-confirm', 'dialog-column-add-task'],
                     HtmxEvents::REFRESH_TASK_HISTORY => true,
                 ]
             ));
@@ -174,16 +176,17 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                         </div>
                                     </div>
                                     <?php
-                                    // Container for selected current task labels
-                                    $selectedLabels = '';
-                                    if (isset($taskSelectLabels) && is_array($taskSelectLabels) && count($taskSelectLabels) > 0) {
-                                        foreach ($taskSelectLabels as $label) {
-                                            $selectedLabels .= '<input type="hidden" id="hiddenLabelId_' . htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') . '" name="selectedLabels[]" value="' . htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') . '">';
-                                            $selectedLabels .= '<span id="visualLabelId_' . htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') . '" style="background-color: ' . htmlspecialchars($label['label_color'], ENT_QUOTES, 'UTF-8') . ';">' . htmlspecialchars($label['label_name'], ENT_QUOTES, 'UTF-8') . '</span>';
-                                        }
-                                    }
+                                    // Preselected labels for the current task. Whitespace between
+                                    // chips is harmless — #selectedLabelsContainer is a flex
+                                    // container, so spacing is controlled by `gap` in task.css.
+                                    $selectedLabelDetails = isset($taskSelectLabels) && is_array($taskSelectLabels) ? $taskSelectLabels : [];
                                     ?>
-                                    <div class="flex-cell flex-cell-vcenter" id="selectedLabelsContainer"><?=$selectedLabels?></div>
+                                    <div class="flex-cell flex-cell-vcenter" id="selectedLabelsContainer">
+                                        <?php foreach ($selectedLabelDetails as $label): ?>
+                                            <input type="hidden" id="hiddenLabelId_<?= htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') ?>" name="selectedLabels[]" value="<?= htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') ?>">
+                                            <span id="visualLabelId_<?= htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') ?>" style="background-color: <?= htmlspecialchars($label['label_color'], ENT_QUOTES, 'UTF-8') ?>;"><?= htmlspecialchars($label['label_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
                                 </div>
                                 <div class="flex-row">
                                     <div class="flex-cell">
@@ -282,6 +285,23 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                                 <div id="duplicate-task-box"><!-- content goes here --></div>
                                             </div>
                                         </div>
+
+                                        <!-- Recurring schedule Button: opens the slide-out
+                                             recurrence panel (task edit mode only). Uses hx-swap="none"
+                                             + a JS fetch (TaskContextMenu.openRecurrencePanel) instead of
+                                             a plain hx-get into body — htmx swaps leave the response's
+                                             <script> tags in the DOM as inert elements, which pile up on
+                                             repeated opens. NOT .open-modal-btn, which ModalManager
+                                             ignores inside forms. -->
+                                        <?php if (isset($_GET['action']) && $_GET['action'] == 'edit'): ?>
+                                            <button class="btn btn-dark-gray btn-block"
+                                                    id="make-recurring-btn"
+                                                    data-recurrence-url="/task/recurrence/panel/<?=(int)$_GET['task_id']?>"
+                                                    type="button"
+                                                    tabindex="-1">
+                                                <?= (!empty($taskScheduleId) ? 'Edit recurring schedule' : 'Make recurring') ?>
+                                            </button>
+                                        <?php endif; ?>
 
                                     </div>
                                 </div>

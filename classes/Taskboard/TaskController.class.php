@@ -4,6 +4,7 @@ namespace Dashboard\Taskboard;
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\User;
 use Dashboard\Core\ItemImageService;
+use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\ColumnController;
 
 class TaskController {
@@ -139,6 +140,55 @@ class TaskController {
         return $this->taskModel->moveTask($this->user->getUserId(), $taskId, $newColumnId, $columnFlagSettings);
     }
 
+    /**
+     * Quick priority change (context menu / inline actions).
+     *
+     * @param int $taskId
+     * @param int $priority 0-4 (Lowest..Highest)
+     * @return array ['success' => bool, 'message' => string]
+     */
+    public function handleSetPriority(int $taskId, int $priority): array {
+        if (!$this->taskModel->validateTaskOwnership($this->user->getUserId(), $taskId)) {
+            return ['success' => false, 'message' => 'Unauthorized: User does not own this task.'];
+        }
+
+        $priority = max(0, min(4, $priority));
+
+        $this->db->q(
+            "UPDATE `tm_task` SET `task_priority` = ?, `task_modified` = NOW() WHERE `task_id` = ?",
+            'ii',
+            $priority,
+            $taskId
+        );
+
+        return ['success' => true, 'message' => 'Priority updated.'];
+    }
+
+    /**
+     * HTTP entry point for POST /task/priority/:task_id (context menu).
+     * Sends triggerResponse (toast + board refresh) and returns ''.
+     */
+    public function handleSetPriorityRequest() {
+        $taskId = (int)($_GET['task_id'] ?? 0);
+        $priority = (int)($_POST['task_priority'] ?? -1);
+
+        if ($taskId <= 0 || $priority < 0 || $priority > 4) {
+            triggerResponse(HtmxEvents::errorResponse('Invalid priority request.'));
+        }
+
+        $result = $this->handleSetPriority($taskId, $priority);
+
+        if ($result['success']) {
+            triggerResponse(HtmxEvents::successResponse($result['message'], [
+                HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
+            ]));
+        } else {
+            triggerResponse(HtmxEvents::errorResponse($result['message']));
+        }
+
+        return '';
+    }
+
 
     public function handleDragAndDropTaskColumns()
     {
@@ -200,7 +250,8 @@ class TaskController {
                     'priority' => $this->taskModel->getTaskPriority(),
                     'labels' => $this->taskModel->getTaskLabels(),
                     'resolved_date' => $this->taskModel->getTaskResolvedDate(),
-                    'checklist_completion_rate' => $this->taskModel->getChecklistCompletionRate()
+                    'checklist_completion_rate' => $this->taskModel->getChecklistCompletionRate(),
+                    'schedule_id' => $this->taskModel->getTaskScheduleId(),
                 ]
             ];
         }

@@ -13,7 +13,7 @@ class CoreRoutes extends AbstractRouteRegistrar {
                 'title' => 'Task Dashboard', 'css' => ['layout', 'task'], 'js' => ['notifications'], 'full_page' => true,
             ], 'middleware' => $this->auth()],
             ['GET', '/board', 'taskboard/page/view_taskboard', 'type' => 'page', 'options' => [
-                'title' => 'Task Management Board', 'css' => ['layout', 'task'], 'js' => ['task.board', 'notifications'],
+                'title' => 'Task Management Board', 'css' => ['layout', 'task', 'context.menu'], 'js' => ['task.board', 'notifications'],
                 'external_js' => ['/node_modules/sortablejs/Sortable.min.js', '/node_modules/tinymce/tinymce.min.js'], 'full_page' => true,
             ], 'middleware' => $this->auth()],
             ['GET', '/stickynotes', 'stickynote/page/index', 'type' => 'page', 'options' => [
