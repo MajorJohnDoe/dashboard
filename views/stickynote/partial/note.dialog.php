@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 
 use Dashboard\Core\HtmxEvents;
 
@@ -76,7 +77,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
 
 <div id="dialog-note" 
     class="modal-container" 
-    hx-get="/stickynotes/note/edit/<?=htmlspecialchars($note_id); ?>" 
+    hx-get="/stickynotes/note/edit/<?=Sanitize::e($note_id); ?>" 
     hx-trigger="refreshModal from:body" 
     hx-target="#dialog-note" 
     hx-swap="outerHTML"
@@ -94,20 +95,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                     <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                 <div class="flex-row">
                     <div class="flex-cell">
-                        <input type="text" placeholder="Note title" name="title" id="note_title" value="<?=htmlspecialchars($note['title'] ?? '');?>">
+                        <input type="text" placeholder="Note title" name="title" id="note_title" value="<?=Sanitize::e($note['title'] ?? '');?>">
                     </div>
                     <div class="flex-cell flex-cell-shrink">
                         <select name="category_id" id="note_category">
                             <?php 
                             foreach ($categories as $category): ?>
-                                <option value="<?=htmlspecialchars($category['id'] ?? '0'); ?>"<?php
+                                <option value="<?=Sanitize::e($category['id'] ?? '0'); ?>"<?php
                                     if ($action == 'edit') {
                                         echo ($note['category_id'] ?? '') == $category['id'] ? 'selected' : '';
                                     } else {
                                         echo ($category['id'] ?? '') == $GET_category_id ? 'selected' : '';
                                     }
                                     ?>>
-                                    <?=htmlspecialchars($category['title']); ?>
+                                    <?=Sanitize::e($category['title']); ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -122,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                                 data-type="small-popup"
                                 data-popup-wrapper="audio-transcribe-box"
                                 <?=(strlen($user->getChatGPTAPIKey()) < 2 ? 'title="You need to input a openAI GPT Key in account settings" disabled':'')?>>
-                                <i class="fa fa-lg (20% increase) fa-microphone"></i>
+                                <span class="mic-icon" aria-hidden="true">🎤</span>
                         </button>
                         <div class="small-popup-box-wrapper">
                             <div id="audio-transcribe-box"><!-- content fetches here --></div>
@@ -139,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                 </div>
                 <div class="flex-row" style="flex: 1;">
                     <div class="flex-cell">
-                        <textarea name="content" id="note_content" class="tinymce_editor" style="height: 300px;" placeholder="Note content"><?=htmlspecialchars($note['content'] ?? '');?></textarea>
+                        <textarea name="content" id="note_content" class="tinymce_editor" style="height: 300px;" placeholder="Note content"><?=Sanitize::e($note['content'] ?? '');?></textarea>
                         <style>
                             .tox-tinymce { height: 100% !important; }
                         </style>
@@ -148,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                 <div class="flex-row">
                     <div class="flex-cell flex-vertical-center flex-right">
                     <?php if ($action == 'edit'): ?>
-                        <input type="hidden" name="note_id" value="<?=htmlspecialchars($note_id); ?>">
+                        <input type="hidden" name="note_id" value="<?=Sanitize::e($note_id); ?>">
                     <?php endif; ?>
                     </div>
                     <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
@@ -170,7 +171,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                         <?php endif; ?>
                     </div>
                     <div class="flex-cell flex-vertical-center flex-right">
-                        <button type="submit" form="form_stickynote" class="btn btn-green"><?=htmlspecialchars($submit_button_text);?></button>
+                        <button type="submit" form="form_stickynote" class="btn btn-green"><?=Sanitize::e($submit_button_text);?></button>
                     </div>
                 </div>
             </div>

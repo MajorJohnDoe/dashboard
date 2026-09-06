@@ -1,6 +1,8 @@
 <?php
 namespace Dashboard\Taskboard;
 
+use Dashboard\Core\Sanitize;
+
 class HistoryCalendar {
     private $currentDate;
     private $tasks;
@@ -38,13 +40,13 @@ class HistoryCalendar {
             $html .= '<div data-date="' . $day->format('Y-m-d') . '" class="day' . ($isToday ? ' today' : '') . '">';
             $html .= '<ul class="tasks">';
             foreach ($dayTasks as $task) {
-                $taskTitle = isset($task['task_title']) ? htmlspecialchars($task['task_title'], ENT_QUOTES, 'UTF-8') : 'Untitled Task';
+                $taskTitle = isset($task['task_title']) ? Sanitize::e($task['task_title']) : 'Untitled Task';
     
                 $taskLabels = '';
                 if (isset($task['labels']) && is_array($task['labels']) && count($task['labels']) > 0) {
                     $formattedLabels = array_map(function($label) {
-                        $fontColor = adjustHexColorBrightness(htmlspecialchars($label['label_color']), -155);
-                        return '<div style="background-color: '.htmlspecialchars($label['label_color'], ENT_QUOTES, 'UTF-8').'; color: '.$fontColor.';">'.htmlspecialchars($label['label_name'], ENT_QUOTES, 'UTF-8').'</div>';
+                        $fontColor = adjustHexColorBrightness(Sanitize::e($label['label_color']), -155);
+                        return '<div style="background-color: '.Sanitize::e($label['label_color']).'; color: '.$fontColor.';">'.Sanitize::e($label['label_name']).'</div>';
                     }, $task['labels']);
                 
                     $taskLabels .= implode('', $formattedLabels);

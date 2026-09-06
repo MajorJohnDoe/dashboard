@@ -1,4 +1,5 @@
 <?php    
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\ColumnController;
 
@@ -91,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'], $_GET['col
                                     <label for="column_name">Column name:</label>
                                 </div>
                                 <div class="flex-cell">
-                                    <input type="text" name="column_name" id="column_name" value="<?= htmlspecialchars(html_entity_decode($formColumnName)) ?>">
+                                    <input type="text" name="column_name" id="column_name" value="<?= Sanitize::e(html_entity_decode($formColumnName)) ?>">
                                 </div>
                             </div>
                             <div class="flex-row">
@@ -131,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['action'], $_GET['col
                                     </select>
                                 </div>
                             </div>
-                            <input type="hidden" name="column_id" value="<?= htmlspecialchars($columnId) ?>">
+                            <input type="hidden" name="column_id" value="<?= Sanitize::e($columnId) ?>">
                         </div>
                     </div>
                     <div class="right-column">

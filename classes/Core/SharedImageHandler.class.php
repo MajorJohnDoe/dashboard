@@ -76,7 +76,21 @@ class SharedImageHandler {
 
         foreach ($existingImages as $image) {
             if (strpos($newContent, $image['image_path']) === false) {
-                $toDelete[] = $image['image_path'];
+                // The file may be shared with other items (duplicated tasks,
+                // schedule templates, spawned recurring tasks). Only mark it
+                // for deletion when this is the last remaining reference;
+                // this item's DB row goes away regardless.
+                $refs = $this->db->q(
+                    "SELECT COUNT(*) AS cnt FROM `shared_item_images`
+                     WHERE `image_path` = ? AND (`item_id` <> ? OR `item_type` <> ?)",
+                    "sis",
+                    $image['image_path'],
+                    $this->itemId,
+                    $this->itemType
+                );
+                if (is_array($refs) && ((int)($refs[0]['cnt'] ?? 0)) === 0) {
+                    $toDelete[] = $image['image_path'];
+                }
                 $this->db->q("DELETE FROM `shared_item_images` WHERE `item_id` = ? AND `item_type` = ? AND `image_name` = ?", "iss", $this->itemId, $this->itemType, $image['image_name']);
             }
         }

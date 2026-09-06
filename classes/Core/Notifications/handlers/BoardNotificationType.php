@@ -1,6 +1,8 @@
 <?php
 namespace Dashboard\Core\Notifications\Handlers;
 
+use Dashboard\Core\Sanitize;
+
 use Dashboard\Core\Notifications\AbstractNotificationType;
 use Dashboard\Core\Notifications\NotificationTypeHandlerInterface;
 use Dashboard\Core\Interfaces\DatabaseInterface;
@@ -52,15 +54,15 @@ class BoardNotificationType extends AbstractNotificationType implements Notifica
         return match ($type) {
             'board_invite' => sprintf(
                 'You\'ve been invited to "%s" with %s access',
-                $this->htmlspecialchars($boardName),
-                $this->htmlspecialchars($accessLevel)
+                Sanitize::e($boardName),
+                Sanitize::e($accessLevel)
             ),
             'board_accept' => 'Your board invitation was accepted',
             'board_decline' => 'Your board invitation was declined',
             'board_access_changed' => sprintf(
                 'Your access to "%s" has been changed to %s',
-                $this->htmlspecialchars($boardName),
-                $this->htmlspecialchars($accessLevel)
+                Sanitize::e($boardName),
+                Sanitize::e($accessLevel)
             ),
             default => $data['message'] ?? '',
         };

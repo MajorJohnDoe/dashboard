@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Taskboard\BoardController;
 
 $controller = new BoardController($db, $user);
@@ -12,8 +13,8 @@ $boardUsers = $controller->getBoardUsers($boardId);
     <?php if ($boardUsers && count($boardUsers) > 0): ?>
     <?php foreach ($boardUsers as $boardUser): ?>
     <div class="flex-row">
-        <div class="flex-cell flex-vertical-center"><?= htmlspecialchars($boardUser['user_username']) ?></div>
-        <div class="flex-cell flex-vertical-center"><?= htmlspecialchars($boardUser['user_email']) ?></div>
+        <div class="flex-cell flex-vertical-center"><?= Sanitize::e($boardUser['user_username']) ?></div>
+        <div class="flex-cell flex-vertical-center"><?= Sanitize::e($boardUser['user_email']) ?></div>
         <div class="flex-cell flex-vertical-center flex-cell-shrink">
             <span class="member-access <?= $boardUser['access_level'] ?>"><?= ucfirst($boardUser['access_level']) ?></span>
             <?php if ($boardUser['status'] === 'pending'): ?>
@@ -36,7 +37,7 @@ $boardUsers = $controller->getBoardUsers($boardId);
             <button class="btn btn-red btn-small" 
                     hx-delete="/board/share" 
                     hx-vals='{"user_id": "<?= $boardUser['user_id'] ?>"}'
-                    hx-confirm="Remove <?= htmlspecialchars($boardUser['user_username']) ?> from this board?"
+                    hx-confirm="Remove <?= Sanitize::e($boardUser['user_username']) ?> from this board?"
                     hx-swap="none">
                 X
             </button>

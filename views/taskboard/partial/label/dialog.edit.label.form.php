@@ -1,4 +1,5 @@
 <?php   
+use Dashboard\Core\Sanitize;
     use Dashboard\Core\HtmxEvents;
     use Dashboard\Taskboard\BoardController;
 
@@ -138,7 +139,7 @@
                 </div>
                 <div class="flex-row">
                     <div class="flex-cell">
-                        <input type="text" name="labelname" placeholder="example: label name" autocomplete="off" id="labelname" value="<?=(isset($labelData['data']['label_name']) ? htmlspecialchars($labelData['data']['label_name']):'')?>">
+                        <input type="text" name="labelname" placeholder="example: label name" autocomplete="off" id="labelname" value="<?=(isset($labelData['data']['label_name']) ? Sanitize::e($labelData['data']['label_name']):'')?>">
                     </div>
                 </div>
                 <div class="flex-row">

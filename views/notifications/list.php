@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\NotificationsController;
 use Dashboard\Core\Notifications\NotificationTypeLoader;
 use Dashboard\Core\Notifications\NotificationRenderer;
@@ -62,10 +63,10 @@ $controller = new NotificationsController($db, $user, null);
                 
                 <div class="notification-body">
                     <div class="notification-title">
-                        <?php echo htmlspecialchars($notificationTitle); ?>
+                        <?php echo Sanitize::e($notificationTitle); ?>
                     </div>
                     <div class="notification-message">
-                        <?php echo htmlspecialchars($notificationMessage); ?>
+                        <?php echo Sanitize::e($notificationMessage); ?>
                     </div>
                     <div class="notification-meta">
                         <span><?php echo date('M j, Y g:i A', strtotime($notification['created_at'])); ?></span>
@@ -88,7 +89,7 @@ $controller = new NotificationsController($db, $user, null);
                                 hx-<?php echo strtolower($action['method'] ?? 'get'); ?>="<?php echo $action['url']; ?>"
                                 hx-vals='<?php echo json_encode($actionData); ?>'
                                 hx-swap="none">
-                            <?php echo htmlspecialchars($action['label']); ?>
+                            <?php echo Sanitize::e($action['label']); ?>
                         </button>
                     <?php endforeach; ?>
                 <?php else: ?>

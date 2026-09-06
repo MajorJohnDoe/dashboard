@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 /**
  * Jobs Table Partial
  * Renders the tabular list of job applications with bulk checkboxes, status pills, and action hooks.
@@ -34,8 +35,8 @@ $csrfToken = CsrfProtection::getToken();
             <tbody>
                 <?php if (!empty($jobs)): ?>
                     <?php foreach ($jobs as $job): 
-                        $appliedDateDisplay = !empty($job['applied_date']) ? htmlspecialchars($job['applied_date']) : 'Not applied';
-                        $deadlineDisplay = !empty($job['deadline_date']) ? 'Due: ' . htmlspecialchars($job['deadline_date']) : 'No deadline';
+                        $appliedDateDisplay = !empty($job['applied_date']) ? Sanitize::e($job['applied_date']) : 'Not applied';
+                        $deadlineDisplay = !empty($job['deadline_date']) ? 'Due: ' . Sanitize::e($job['deadline_date']) : 'No deadline';
                         $interest = $job['interest_level'] ?? ($job['interest'] ?? 'interested');
                         $interestClass = match($interest) {
                             'excited', 'dream' => 'interest-excited',
@@ -49,9 +50,9 @@ $csrfToken = CsrfProtection::getToken();
                         };
                     ?>
                     <tr data-filter-row 
-                        data-status="<?= htmlspecialchars($job['status']) ?>"
-                        data-type="<?= htmlspecialchars($job['job_type']) ?>"
-                        data-work-model="<?= htmlspecialchars($job['work_model']) ?>"
+                        data-status="<?= Sanitize::e($job['status']) ?>"
+                        data-type="<?= Sanitize::e($job['job_type']) ?>"
+                        data-work-model="<?= Sanitize::e($job['work_model']) ?>"
                         data-stale="<?= $job['is_stale'] ? 'true' : 'false' ?>">
                         
                         <td style="text-align: center;">
@@ -67,7 +68,7 @@ $csrfToken = CsrfProtection::getToken();
                         <td>
                             <div class="company-cell">
                                 <div class="company-logo-badge">
-                                    <?= htmlspecialchars($job['company_initial']) ?>
+                                    <?= Sanitize::e($job['company_initial']) ?>
                                 </div>
                                 <div>
                                     <div class="company-name">
@@ -78,7 +79,7 @@ $csrfToken = CsrfProtection::getToken();
                                            hx-get="/jobs/dialog/edit/<?= $job['id'] ?>"
                                            hx-target="body"
                                            hx-swap="beforeend">
-                                            <?= htmlspecialchars($job['company']) ?>
+                                            <?= Sanitize::e($job['company']) ?>
                                         </a>
                                     </div>
                                 </div>
@@ -87,16 +88,16 @@ $csrfToken = CsrfProtection::getToken();
 
                         <!-- Position -->
                         <td>
-                            <div class="position-title"><?= htmlspecialchars($job['position']) ?></div>
+                            <div class="position-title"><?= Sanitize::e($job['position']) ?></div>
                             <?php if (!empty($job['department'])): ?>
-                                <div class="position-sub"><?= htmlspecialchars($job['department']) ?></div>
+                                <div class="position-sub"><?= Sanitize::e($job['department']) ?></div>
                             <?php endif; ?>
                         </td>
 
                         <!-- Status -->
                         <td>
-                            <span class="pill status-btn-<?= htmlspecialchars($job['status']) ?>">
-                                <?= htmlspecialchars(ucfirst($job['status'])) ?>
+                            <span class="pill status-btn-<?= Sanitize::e($job['status']) ?>">
+                                <?= Sanitize::e(ucfirst($job['status'])) ?>
                             </span>
                         </td>
 
@@ -105,11 +106,11 @@ $csrfToken = CsrfProtection::getToken();
                             <?php if ($job['job_type'] === 'lia'): ?>
                                 <span class="label-badge label-lia" title="Lärande i arbete">LIA</span>
                             <?php else: ?>
-                                <span class="label-badge label-<?= htmlspecialchars($job['job_type']) ?>"><?= htmlspecialchars(ucfirst($job['job_type'])) ?></span>
+                                <span class="label-badge label-<?= Sanitize::e($job['job_type']) ?>"><?= Sanitize::e(ucfirst($job['job_type'])) ?></span>
                             <?php endif; ?>
 
-                            <span class="label-badge label-<?= htmlspecialchars($job['work_model']) ?>">
-                                <?= htmlspecialchars(ucfirst($job['work_model'])) ?>
+                            <span class="label-badge label-<?= Sanitize::e($job['work_model']) ?>">
+                                <?= Sanitize::e(ucfirst($job['work_model'])) ?>
                             </span>
                         </td>
 
@@ -123,7 +124,7 @@ $csrfToken = CsrfProtection::getToken();
                         <!-- Source -->
                         <td>
                             <span class="source-tag">
-                                <?= htmlspecialchars($job['source'] ?: '—') ?>
+                                <?= Sanitize::e($job['source'] ?: '—') ?>
                             </span>
                         </td>
 
@@ -163,8 +164,8 @@ $csrfToken = CsrfProtection::getToken();
                                 <button class="btn-icon btn-icon-danger" 
                                         title="Delete application"
                                         hx-delete="/jobs/dialog/delete/<?= $job['id'] ?>"
-                                        hx-confirm="Delete application for <?= htmlspecialchars(addslashes($job['company'])) ?>?"
-                                        hx-headers='{"X-CSRF-Token": "<?= htmlspecialchars($csrfToken) ?>"}'
+                                        hx-confirm="Delete application for <?= Sanitize::e(addslashes($job['company'])) ?>?"
+                                        hx-headers='{"X-CSRF-Token": "<?= Sanitize::e($csrfToken) ?>"}'
                                         hx-swap="none">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                         <polyline points="3 6 5 6 21 6"></polyline>

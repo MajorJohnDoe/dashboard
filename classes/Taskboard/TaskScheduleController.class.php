@@ -2,6 +2,7 @@
 namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
+use Dashboard\Core\ItemImageService;
 use Dashboard\Core\User;
 
 /**
@@ -260,6 +261,11 @@ class TaskScheduleController
             return ['success' => false, 'message' => 'Schedule created but the task could not be linked.'];
         }
 
+        // The schedule template now owns its own copies of the task's image
+        // references (same files on disk) — removing an image from the
+        // original task must not break spawned recurring tasks.
+        (new ItemImageService($this->db))->copyImageReferences($taskId, 'task', $scheduleId, 'schedule');
+
         return [
             'success' => true,
             'message' => 'Task is now recurring',
@@ -280,6 +286,14 @@ class TaskScheduleController
         if (!$this->board->validateBoardWriteAccess($this->user->getUserId(), (int)$schedule[0]['board_id'])) {
             return ['success' => false, 'message' => 'You do not have write access to this board.'];
         }
+
+        // Reference-counted removal of the template's image rows — the files
+        // survive while spawned tasks still reference them.
+        (new ItemImageService($this->db))->deleteAllForItem(
+            (int)$schedule[0]['user_id'],
+            $scheduleId,
+            'schedule'
+        );
 
         return $this->schedules->deleteSchedule($scheduleId)
             ? ['success' => true, 'message' => 'Recurring task deleted successfully']

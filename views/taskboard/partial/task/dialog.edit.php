@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\TaskController;
 use Dashboard\Taskboard\ColumnController;
@@ -128,14 +129,14 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
 
                                         if($taskColumns != false) {
                                             foreach ($taskColumns['columns'] as $column) {
-                                                echo '<option value="'.$column['id'].'">'.htmlspecialchars(html_entity_decode($column['column_name'], ENT_QUOTES, 'UTF-8')).'</option>';
+                                                echo '<option value="'.$column['id'].'">'.Sanitize::e(html_entity_decode($column['column_name'], ENT_QUOTES, 'UTF-8')).'</option>';
                                             }
                                         }
                     
                             echo '      </select>
                                     </div>
                                     <div class="flex-cell flex-vertical-center flex-cell-shrink">
-                                        <input type="hidden" name="task_id" value="'.(isset($_GET['task_id']) ? htmlspecialchars($_GET['task_id'], ENT_QUOTES, 'UTF-8') : null).'">
+                                        <input type="hidden" name="task_id" value="'.(isset($_GET['task_id']) ? Sanitize::e($_GET['task_id']) : null).'">
                                         <input type="submit" value="Move task" form="form_addTask" class="btn btn-green">
                                     </div>
                                 </div>
@@ -151,14 +152,14 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                 <div class="flex-row">
                                     <div class="flex-cell">
                                         <label for="task_title">Task title:</label>
-                                        <input type="text" name="task_title" id="task_title" autocomplete="off" autofocus value="<?=(isset($taskTitle) ? htmlspecialchars($taskTitle, ENT_QUOTES, 'UTF-8') : '')?>">
+                                        <input type="text" name="task_title" id="task_title" autocomplete="off" autofocus value="<?=(isset($taskTitle) ? Sanitize::e($taskTitle) : '')?>">
                                     </div>
                                 </div>
                                 <div class="flex-row">
                                     <div class="flex-cell flex-cell-shrink flex-vertical-center" style="position: relative;">
                                         <div style="position: relative;">
                                             <input 
-                                                class="fa-solid fa-tags"
+                                                class="label-search-input"
                                                 autocomplete="off"
                                                 type="search" 
                                                 name="search-label" 
@@ -183,15 +184,15 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                     ?>
                                     <div class="flex-cell flex-cell-vcenter" id="selectedLabelsContainer">
                                         <?php foreach ($selectedLabelDetails as $label): ?>
-                                            <input type="hidden" id="hiddenLabelId_<?= htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') ?>" name="selectedLabels[]" value="<?= htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') ?>">
-                                            <span id="visualLabelId_<?= htmlspecialchars($label['label_id'], ENT_QUOTES, 'UTF-8') ?>" style="background-color: <?= htmlspecialchars($label['label_color'], ENT_QUOTES, 'UTF-8') ?>;"><?= htmlspecialchars($label['label_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <input type="hidden" id="hiddenLabelId_<?= Sanitize::e($label['label_id']) ?>" name="selectedLabels[]" value="<?= Sanitize::e($label['label_id']) ?>">
+                                            <span id="visualLabelId_<?= Sanitize::e($label['label_id']) ?>" style="background-color: <?= Sanitize::e($label['label_color']) ?>;"><?= Sanitize::e($label['label_name']) ?></span>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
                                 <div class="flex-row">
                                     <div class="flex-cell">
                                         <label for="task_desc">Task description:</label><br>
-                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?=(isset($taskDescription) ? htmlspecialchars($taskDescription, ENT_QUOTES, 'UTF-8') : '')?></textarea>
+                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?=(isset($taskDescription) ? Sanitize::e($taskDescription) : '')?></textarea>
                                     </div>
                                 </div>
                                 <div class="flex-row task_checklist"></div>
@@ -320,7 +321,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                         <div class="flex-cell">
                         <?php if (isset($_GET['action']) && $_GET['action'] == 'edit'): ?>
                             <form id="form_deleteTask" hx-delete="<?=(isset($post_url) ? $post_url : '')?>" hx-target="body" hx-swap="beforeend">
-                                <input type="hidden" name="task_id" value="<?=(isset($_GET['task_id']) ? htmlspecialchars($_GET['task_id'], ENT_QUOTES, 'UTF-8') : '')?>">
+                                <input type="hidden" name="task_id" value="<?=(isset($_GET['task_id']) ? Sanitize::e($_GET['task_id']) : '')?>">
                                 <button type="submit" class="btn btn-light-gray btn-hover-red" tabindex="-1">Delete task</button>
                             </form>
                         <?php endif; ?>

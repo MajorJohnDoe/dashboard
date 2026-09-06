@@ -1,6 +1,8 @@
 <?php
 namespace Dashboard\Core\Notifications\Handlers;
 
+use Dashboard\Core\Sanitize;
+
 use Dashboard\Core\Notifications\AbstractNotificationType;
 use Dashboard\Core\Notifications\NotificationTypeHandlerInterface;
 use Dashboard\Core\Interfaces\DatabaseInterface;
@@ -52,26 +54,26 @@ class TaskNotificationType extends AbstractNotificationType implements Notificat
         return match ($type) {
             'task_due_soon' => sprintf(
                 'Task "%s" is due soon (%s)',
-                $this->htmlspecialchars($taskTitle),
+                Sanitize::e($taskTitle),
                 $data['due_date'] ?? 'today'
             ),
             'task_overdue' => sprintf(
                 'Task "%s" is overdue!',
-                $this->htmlspecialchars($taskTitle)
+                Sanitize::e($taskTitle)
             ),
             'task_assigned' => sprintf(
                 'You were assigned to task "%s"%s',
-                $this->htmlspecialchars($taskTitle),
-                !empty($data['assigned_by']) ? ' by ' . $this->htmlspecialchars($data['assigned_by']) : ''
+                Sanitize::e($taskTitle),
+                !empty($data['assigned_by']) ? ' by ' . Sanitize::e($data['assigned_by']) : ''
             ),
             'task_completed' => sprintf(
                 'Task "%s" has been completed',
-                $this->htmlspecialchars($taskTitle)
+                Sanitize::e($taskTitle)
             ),
             'task_comment' => sprintf(
                 '%s commented on "%s"',
-                $this->htmlspecialchars($data['commenter_name'] ?? 'Someone'),
-                $this->htmlspecialchars($taskTitle)
+                Sanitize::e($data['commenter_name'] ?? 'Someone'),
+                Sanitize::e($taskTitle)
             ),
             default => '',
         };

@@ -1,4 +1,5 @@
 <?php        
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\BoardController;
 
@@ -88,9 +89,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $_GET['action'] == 'edit') {
                                 <div class="flex-cell">
                                     <span class="form-label">Board title:</span>
 <?php if ($board_result && isset($board_result[0]['user_id']) && $board_result[0]['user_id'] == $user->getUserId()): ?>
-                                        <input type="text" name="board_title" id="board_title" value="<?=(isset($BoardName) ? htmlspecialchars($BoardName):'')?>">
+                                        <input type="text" name="board_title" id="board_title" value="<?=(isset($BoardName) ? Sanitize::e($BoardName):'')?>">
                                     <?php else: ?>
-                                        <div class="form-value"><?=(isset($BoardName) ? htmlspecialchars($BoardName):'')?></div>
+                                        <div class="form-value"><?=(isset($BoardName) ? Sanitize::e($BoardName):'')?></div>
                                     <?php endif; ?>
                                 </div>
                             </div>

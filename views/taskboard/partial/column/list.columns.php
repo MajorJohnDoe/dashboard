@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Taskboard\ColumnController;
 use Dashboard\Taskboard\TaskController;
 use Dashboard\Taskboard\TaskScheduleController;
@@ -53,7 +54,7 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
     foreach ($columnsResult['columns'] as $column) {
         echo '  <div id="column-' . $column['id'] . '" class="task-column" data-column-id="' . $column['id'] . '">';
         echo '      <div class="column-header">';
-        echo '          <div class="column-name">' . htmlspecialchars(html_entity_decode($column['column_name'])) . '</div>';
+        echo '          <div class="column-name">' . Sanitize::e(html_entity_decode($column['column_name'])) . '</div>';
         echo '          <div class="column-icons">';
         if ($columnController->validateBoardWriteAccess($user->getActiveTaskBoard())) {
             echo '              <div 
@@ -92,8 +93,8 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
                 $taskLabels = '';
                 if (!empty($taskSelectedLabels)) {
                     $formattedLabels = array_map(function($label) {
-                        $fontColor = adjustHexColorBrightness(htmlspecialchars($label['label_color']), -155);
-                        return '<div style="background-color: ' . htmlspecialchars($label['label_color']) . '; color: ' . $fontColor . ';">' . htmlspecialchars($label['label_name']) . '</div>';
+                        $fontColor = adjustHexColorBrightness(Sanitize::e($label['label_color']), -155);
+                        return '<div style="background-color: ' . Sanitize::e($label['label_color']) . '; color: ' . $fontColor . ';">' . Sanitize::e($label['label_name']) . '</div>';
                     }, $taskSelectedLabels);
                 
                     $taskLabels .= implode('', $formattedLabels);
@@ -101,7 +102,7 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
 
                 $taskPriorityClass = $priorityClasses[$task['task_priority']] ?? 'priority-lowest';
                 $recurringIcon = !empty($task['schedule_id'])
-                    ? ' <i class="fa fa-repeat tm-task-recurring-icon" title="Recurring task"></i>'
+                    ? ' <span class="tm-task-recurring-icon" title="Recurring task">&#8635;</span>'
                     : '';
 
                 echo '<li 
@@ -114,7 +115,7 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
                 echo '<div class="flex-table">
                         <div class="flex-row">
                             <div class="flex-cell flex-cell-vcenter" style="padding: 0px;">
-                                <div class="title">' . htmlspecialchars(html_entity_decode($task['task_title'])) . $recurringIcon . '</div>
+                                <div class="title">' . Sanitize::e(html_entity_decode($task['task_title'])) . $recurringIcon . '</div>
                                 ' . (!empty($taskSelectedLabels) ? '<div class="labels">' . $taskLabels . '</div>' : '') . '
                             </div>
                             <div class="flex-cell flex-cell-shrink">

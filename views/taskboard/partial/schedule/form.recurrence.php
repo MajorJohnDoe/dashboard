@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Taskboard\TaskSchedule;
 
 /**
@@ -41,7 +42,7 @@ $showPriority = $showPriority ?? true;
                 <?php if (($columns['success'] ?? false)): ?>
                     <?php foreach ($columns['columns'] as $column): ?>
                         <option value="<?= (int)$column['id'] ?>" <?= $columnId === (int)$column['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars(html_entity_decode($column['column_name']), ENT_QUOTES, 'UTF-8') ?>
+                            <?= Sanitize::e(html_entity_decode($column['column_name'])) ?>
                         </option>
                     <?php endforeach; ?>
                 <?php endif; ?>
@@ -144,7 +145,7 @@ $showPriority = $showPriority ?? true;
                     <input type="radio" id="<?= $idPrefix ?>-end-date" name="end_type" value="date" <?= $endType === 'date' ? 'checked' : '' ?>>
                     <label for="<?= $idPrefix ?>-end-date">On</label>
                     <span class="schedule-end-input" data-show-end="date" <?= $endType === 'date' ? '' : 'style="display:none;"' ?>>
-                        <input type="date" name="end_date" id="<?= $idPrefix ?>-end_date" value="<?= htmlspecialchars($endDate, ENT_QUOTES, 'UTF-8') ?>">
+                        <input type="date" name="end_date" id="<?= $idPrefix ?>-end_date" value="<?= Sanitize::e($endDate) ?>">
                     </span>
                 </div>
             </div>

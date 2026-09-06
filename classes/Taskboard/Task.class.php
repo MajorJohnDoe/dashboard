@@ -3,6 +3,7 @@ namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\AccessGuard;
+use Dashboard\Core\ItemImageService;
 
 class Task {
     private $db;
@@ -160,6 +161,10 @@ class Task {
 
             $newTaskId = $this->insertDuplicateTask($originalTask, $columnId);
             $this->duplicateTaskLabels($taskId, $newTaskId);
+
+            // The duplicate references the same image files; deletion stays
+            // reference-counted, so removing them from either task is safe.
+            (new ItemImageService($this->db))->copyImageReferences($taskId, 'task', $newTaskId, 'task');
 
             $this->db->commit();
             return ['success' => true, 'message' => 'Task duplicated successfully', 'new_task_id' => $newTaskId];

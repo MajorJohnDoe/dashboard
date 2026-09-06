@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 
 $controller = new \Dashboard\Stickynote\StickyNoteController($db, $user);
 
@@ -21,23 +22,23 @@ else {
     echo '<h3>Search Results:</h3>';
     echo '<div class="sn-search-results-grid">';
     foreach ($notes as $note) {
-        $strippedNoteSummary = nl2br(htmlspecialchars(html_entity_decode(strip_tags($note['content']), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
+        $strippedNoteSummary = nl2br(Sanitize::e(html_entity_decode(strip_tags($note['content']), ENT_QUOTES | ENT_HTML5, 'UTF-8')));
         ?>
         <div 
             class="sn-note open-modal-btn" 
             data-modal-target="#dialog-note"
-            style="--note-accent: <?=htmlspecialchars($note['category_color'] ?? '#9aa7b5');?>;"
-            hx-get="/stickynotes/note/edit/<?=htmlspecialchars($note['id']); ?>" 
+            style="--note-accent: <?=Sanitize::e($note['category_color'] ?? '#9aa7b5');?>;"
+            hx-get="/stickynotes/note/edit/<?=Sanitize::e($note['id']); ?>" 
             hx-target="body" 
             hx-swap="beforeend">
 
             <div class="sn-note-header">
                 <span class="sn-note-category" >
-                    <?=(isset($note['category_title']) ? htmlspecialchars($note['category_title']) : 'Uncategorized');?>
+                    <?=(isset($note['category_title']) ? Sanitize::e($note['category_title']) : 'Uncategorized');?>
                 </span>
                 <span class="sn-note-date"><?php echo date('M j, Y', strtotime($note['created_at'])); ?></span>
             </div>
-            <h3 class="sn-note-title"><?=htmlspecialchars($note['title']); ?></h3>
+            <h3 class="sn-note-title"><?=Sanitize::e($note['title']); ?></h3>
             <p class="sn-note-content"><?=$strippedNoteSummary?></p>
         </div>
         <?php

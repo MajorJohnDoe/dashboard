@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\TaskScheduleController;
 use Dashboard\Taskboard\TaskSchedule;
@@ -15,6 +16,24 @@ $scheduleId = isset($_GET['schedule_id']) ? (int)$_GET['schedule_id'] : 0;
 $postUrl = $action === 'edit'
     ? "/schedule/dialog/edit/{$boardId}/{$scheduleId}"
     : "/schedule/dialog/new/{$boardId}";
+
+// Checklist rows post as checklist[i][status] / checklist[i][description]
+// (same field names as the task dialog). Normalize them into the
+// task_checklist template field, which TaskSchedule::normalizeChecklist()
+// accepts as an array or a JSON string.
+//
+// When NO checklist inputs are posted (no rows added, or the user removed
+// them all) an empty string is sent instead: normalizeChecklist('') returns
+// null, which clears the stored template checklist. Without this the
+// controller's `$data[...] ?? $existing[...]` fallback would keep the old
+// checklist forever.
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['checklist']) && is_array($_POST['checklist'])) {
+        $_POST['task_checklist'] = $_POST['checklist'];
+    } else {
+        $_POST['task_checklist'] = '';
+    }
+}
 
 // #MARK: CREATE schedule - form post
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'new') {
@@ -87,6 +106,15 @@ if (!empty($schedule['labels'])) {
     }
 }
 
+// Checklist template items (same shape as tm_task.task_checklist)
+$checklistItems = [];
+if (!empty($schedule['task_checklist'])) {
+    $decoded = json_decode((string)$schedule['task_checklist'], true);
+    if (is_array($decoded)) {
+        $checklistItems = $decoded;
+    }
+}
+
 // Columns for target selection
 $columnController = new ColumnController($db, $user);
 $columnsResult = $columnController->getColumnsForBoard($boardId);
@@ -134,14 +162,14 @@ $idPrefix = 'schedule';
                                     <div class="flex-cell">
                                         <label for="task_title">Task title:</label>
                                         <input type="text" name="task_title" id="task_title" autocomplete="off" autofocus
-                                               value="<?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?>">
+                                               value="<?= Sanitize::e($title) ?>">
                                     </div>
                                 </div>
                                 <div class="flex-row">
                                     <div class="flex-cell flex-cell-shrink flex-vertical-center" style="position: relative;">
                                         <div style="position: relative;">
                                             <input
-                                                class="fa-solid fa-tags"
+                                                class="label-search-input"
                                                 autocomplete="off"
                                                 type="search"
                                                 name="search-label"
@@ -161,14 +189,42 @@ $idPrefix = 'schedule';
                                     <div class="flex-cell flex-cell-vcenter" id="selectedLabelsContainer">
                                         <?php foreach ($selectedLabelDetails as $label): ?>
                                             <input type="hidden" name="selectedLabels[]" value="<?= (int)$label['id'] ?>">
-                                            <span style="background-color: <?= htmlspecialchars($label['label_color'], ENT_QUOTES, 'UTF-8') ?>;"><?= htmlspecialchars($label['label_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                            <span style="background-color: <?= Sanitize::e($label['label_color']) ?>;"><?= Sanitize::e($label['label_name']) ?></span>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
                                 <div class="flex-row">
                                     <div class="flex-cell">
                                         <label for="task_desc">Task description:</label>
-                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?= htmlspecialchars($description, ENT_QUOTES, 'UTF-8') ?></textarea>
+                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?= Sanitize::e($description) ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="flex-row">
+                                    <div class="flex-cell schedule-checklist">
+                                        <div class="schedule-checklist-header">
+                                            <label>Checklist:</label>
+                                            <button type="button" id="add-item" class="btn btn-dark-gray schedule-checklist-add" tabindex="-1">+ Add item</button>
+                                        </div>
+                                        <div id="checklist-container">
+                                            <div class="flex-table task-checklist-container" id="checklist-items">
+                                                <?php foreach ($checklistItems as $index => $item): ?>
+                                                    <div class="flex-row">
+                                                        <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
+                                                            <input type="checkbox" name="checklist[<?= (int)$index ?>][status]" tabindex="-1" value="complete" <?= (($item['status'] ?? '') === 'complete' ? 'checked' : '') ?>/>
+                                                        </div>
+                                                        <div class="flex-cell flex-cell-vcenter">
+                                                            <input type="text" name="checklist[<?= (int)$index ?>][description]" value="<?= Sanitize::e($item['description'] ?? '') ?>"/>
+                                                        </div>
+                                                        <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
+                                                            <button type="button" tabindex="-1" class="remove-item btn btn-dark-gray btn-hover-red schedule-checklist-remove" title="Remove item">X</button>
+                                                        </div>
+                                                    </div>
+                                                <?php endforeach; ?>
+                                                <?php if (empty($checklistItems)): ?>
+                                                    <div class="schedule-checklist-empty">No checklist items — spawned tasks won't include one.</div>
+                                                <?php endif; ?>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -189,9 +245,19 @@ $idPrefix = 'schedule';
         </div>
         <div class="form-actions">
             <div class="flex-table">
-                <div class="flex-cell"></div>
-                <div class="flex-cell flex-vertical-center flex-right">
-                    <input type="submit" value="<?= $action === 'edit' ? 'Save schedule' : 'Create schedule' ?>" form="schedule-form" class="btn btn-green">
+                <div class="flex-row">
+                    <div class="flex-cell flex-vertical-center">
+                        <?php if ($action === 'edit'): ?>
+                            <form hx-delete="/schedule/delete/<?= $scheduleId ?>" hx-target="this" hx-swap="none"
+                                  hx-confirm="Delete this schedule? Tasks already created will not be removed.">
+                                <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
+                                <button type="submit" class="btn btn-light-gray btn-hover-red">Delete schedule</button>
+                            </form>
+                        <?php endif; ?>
+                    </div>
+                    <div class="flex-cell flex-vertical-center flex-right">
+                        <input type="submit" value="<?= $action === 'edit' ? 'Save schedule' : 'Create schedule' ?>" form="schedule-form" class="btn btn-green">
+                    </div>
                 </div>
             </div>
         </div>

@@ -1,4 +1,5 @@
 <?php        
+use Dashboard\Core\Sanitize;
 use Dashboard\Taskboard\BoardController;
 
 $board = new BoardController($db, $user);
@@ -65,17 +66,17 @@ echo '</div>'; // End flex table
 function renderLabelCheckbox($label, $isChecked = false) {
     $checked = $isChecked ? 'checked' : '';
 
-    $fontColor = adjustHexColorBrightness(htmlspecialchars($label['label_color']), -115);
+    $fontColor = adjustHexColorBrightness(Sanitize::e($label['label_color']), -115);
 
     echo '  <div class="labelwrapper" 
                 type="button"
-                hx-get="/taskboard/label/form/edit?labelid='.htmlspecialchars($label['id']).'" 
+                hx-get="/taskboard/label/form/edit?labelid='.Sanitize::e($label['id']).'" 
                 hx-target="#dialog-label-edit #label-edit-form-container"
                 hx-swap="innerHTML"
             >
-                <label for="LabelId_' . htmlspecialchars($label['id']) . '" style="background-color: '.htmlspecialchars($label['label_color']).'; color: '.$fontColor.';" tabindex="0">
-                    <input type="radio" id="LabelId_' . htmlspecialchars($label['id']) . '" name="label[]" value="' . htmlspecialchars($label['id']) . '" ' . $checked . ' tabindex="-1">
-                    ' . htmlspecialchars($label['label_name']) . '
+                <label for="LabelId_' . Sanitize::e($label['id']) . '" style="background-color: '.Sanitize::e($label['label_color']).'; color: '.$fontColor.';" tabindex="0">
+                    <input type="radio" id="LabelId_' . Sanitize::e($label['id']) . '" name="label[]" value="' . Sanitize::e($label['id']) . '" ' . $checked . ' tabindex="-1">
+                    ' . Sanitize::e($label['label_name']) . '
                 </label>
             </div>
         ';

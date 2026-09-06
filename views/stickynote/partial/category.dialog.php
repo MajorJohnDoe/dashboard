@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 // categories.php
 
 use Dashboard\Core\HtmxEvents;
@@ -78,7 +79,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get-edit-form') {
 ?>
             <form hx-post="/stickynotes/category/dialog/?action=edit" hx-target="#dialog-category-settings .formOuter" hx-swap="outerHTML">
                 <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
-            <input type="hidden" name="category_id" value="<?= htmlspecialchars($category['id'] ?? '') ?>">
+            <input type="hidden" name="category_id" value="<?= Sanitize::e($category['id'] ?? '') ?>">
             <div class="flex-table" style="background: #e2edf3; border-radius: 0.5rem; margin-bottom: 2rem;">
                 <div class="flex-row">
                     <div class="flex-cell">
@@ -87,16 +88,16 @@ if (isset($_GET['action']) && $_GET['action'] === 'get-edit-form') {
                 </div>
                 <div class="flex-row">
                     <div class="flex-cell">
-                        <input type="text" name="title" value="<?= htmlspecialchars($category['title'] ?? '') ?>" required>
+                        <input type="text" name="title" value="<?= Sanitize::e($category['title'] ?? '') ?>" required>
                     </div>
                     <div class="flex-cell flex-cell-shrink">
-                        <input type="color" name="color" value="<?= htmlspecialchars($category['color'] ?? '') ?>">
+                        <input type="color" name="color" value="<?= Sanitize::e($category['color'] ?? '') ?>">
                     </div>
                 </div>
             </form>
                 <div class="flex-row">
                     <div class="flex-cell flex-cell-shrink">
-                        <form id="form_deleteNote" hx-delete="/stickynotes/category/dialog/?category_id=<?= htmlspecialchars($category['id'] ?? '') ?>" hx-target="body" hx-swap="beforeend">
+                        <form id="form_deleteNote" hx-delete="/stickynotes/category/dialog/?category_id=<?= Sanitize::e($category['id'] ?? '') ?>" hx-target="body" hx-swap="beforeend">
                             <button type="submit" class="btn btn-light-gray btn-hover-red" tabindex="-1" hx-confirm="Are you sure you want to delete this category?">Delete category</button>
                         </form>
                     </div>
@@ -142,7 +143,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'get-edit-form') {
                         <?php 
                             foreach ($allCategories as $category): 
                                 $isUncategorized = $category['id'] === null;
-                                $categoryId = $isUncategorized ? '0' : htmlspecialchars($category['id']);
+                                $categoryId = $isUncategorized ? '0' : Sanitize::e($category['id']);
 
                                 if($isUncategorized == 0) {
                                     echo '
@@ -152,8 +153,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'get-edit-form') {
                                             hx-target="#edit-category-form" 
                                             hx-swap="innerHTML"
                                             hx-trigger="click">
-                                                <span class="sn-category-color" style="background-color: '.htmlspecialchars($category['color']).';"></span>
-                                                '.htmlspecialchars($category['title']).'
+                                                <span class="sn-category-color" style="background-color: '.Sanitize::e($category['color']).';"></span>
+                                                '.Sanitize::e($category['title']).'
                                                 <span class="sn-category-count">'.intval($category['note_count']).'</span>
                                             </a>
                                         </li>

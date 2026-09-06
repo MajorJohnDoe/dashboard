@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\TaskScheduleController;
 use Dashboard\Taskboard\ColumnController;
@@ -88,14 +89,14 @@ $idPrefix = 'recurrence';
                 </p>
             <?php else: ?>
                 <p class="slide-panel-hint">
-                    “<strong><?= htmlspecialchars(html_entity_decode($taskTitle), ENT_QUOTES, 'UTF-8') ?></strong>” will repeat automatically. This task counts as the first occurrence.
+                    “<strong><?= Sanitize::e(html_entity_decode($taskTitle)) ?></strong>” will repeat automatically. This task counts as the first occurrence.
                 </p>
             <?php endif; ?>
 
             <form id="<?= $idPrefix ?>-form" method="POST" hx-post="/task/recurrence/save/<?= $taskId ?>" hx-target="#<?= $idPrefix ?>-form" hx-swap="none">
                 <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
                 <input type="hidden" name="task_id" value="<?= $taskId ?>">
-                <input type="hidden" name="task_title" value="<?= htmlspecialchars($taskTitle, ENT_QUOTES, 'UTF-8') ?>">
+                <input type="hidden" name="task_title" value="<?= Sanitize::e($taskTitle) ?>">
 
                 <div class="nice-form-group">
                 <?php

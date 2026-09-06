@@ -1,6 +1,8 @@
 <?php
 namespace Dashboard\Core\Notifications\Handlers;
 
+use Dashboard\Core\Sanitize;
+
 use Dashboard\Core\Notifications\AbstractNotificationType;
 use Dashboard\Core\Notifications\NotificationTypeHandlerInterface;
 use Dashboard\Core\Interfaces\DatabaseInterface;
@@ -46,13 +48,13 @@ class ChatNotificationType extends AbstractNotificationType implements Notificat
         
         if ($type === 'chat_room_invite') {
             $roomName = $this->getRoomName($data['room_id'] ?? 0);
-            return sprintf('You were invited to chat room "%s"', $this->htmlspecialchars($roomName));
+            return sprintf('You were invited to chat room "%s"', Sanitize::e($roomName));
         }
 
         $senderName = $data['sender_name'] ?? 'Someone';
         
         if ($type === 'chat_mention') {
-            return sprintf('%s mentioned you in a message', $this->htmlspecialchars($senderName));
+            return sprintf('%s mentioned you in a message', Sanitize::e($senderName));
         }
 
         $preview = $data['message_preview'] ?? '';
@@ -60,7 +62,7 @@ class ChatNotificationType extends AbstractNotificationType implements Notificat
             $preview = substr($preview, 0, 47) . '...';
         }
         
-        return sprintf('%s: %s', $this->htmlspecialchars($senderName), $this->htmlspecialchars($preview));
+        return sprintf('%s: %s', Sanitize::e($senderName), Sanitize::e($preview));
     }
 
     public function getIcon(array $data): ?string

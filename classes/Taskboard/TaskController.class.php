@@ -1,6 +1,8 @@
 <?php
 namespace Dashboard\Taskboard;
 
+use Dashboard\Core\Sanitize;
+
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\User;
 use Dashboard\Core\ItemImageService;
@@ -311,7 +313,7 @@ class TaskController {
                 if ($index >= _TASKBOARD_TASK_CHECKLIST_MAXIMUM) {
                     break;
                 }
-                $description = htmlspecialchars($item['description'] ?? '', ENT_QUOTES, 'UTF-8');
+                $description = Sanitize::e($item['description'] ?? '');
                 $status = (isset($item['status']) && $item['status'] === 'complete') ? 'complete' : 'incomplete';
                 $checklistItems[] = [
                     'description' => $description,

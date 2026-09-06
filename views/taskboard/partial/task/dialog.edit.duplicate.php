@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
     use Dashboard\Taskboard\ColumnController;
     use Dashboard\Taskboard\TaskController;
@@ -48,7 +49,7 @@ use Dashboard\Core\HtmxEvents;
                                 <?php
                                     if($taskColumns != false) {
                                         foreach ($taskColumns['columns'] as $column) {
-                                            echo '<option value="'.$column['id'].'">'.htmlspecialchars(html_entity_decode($column['column_name'])).'</option>';
+                                            echo '<option value="'.$column['id'].'">'.Sanitize::e(html_entity_decode($column['column_name'])).'</option>';
                                         }
                                     }
                                 ?>

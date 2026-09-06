@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 // login.php
 use Dashboard\Core\Database;
 use Dashboard\Core\SecureSession;
@@ -50,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit'])) {
         <div class="content">
             <h2>Login</h2>
             <?php if (isset($error)): ?>
-                <p class="error"><?php echo htmlspecialchars($error); ?></p>
+                <p class="error"><?php echo Sanitize::e($error); ?></p>
             <?php endif; ?>
             <form action="/login" method="post">
                 <div>

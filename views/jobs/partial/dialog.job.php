@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 /**
  * Job Add / Edit Modal Dialog Partial
  * Follows Hyperboard's .modal-container, .dialog, and .nice-form-group conventions.
@@ -93,7 +94,7 @@ $csrfToken = CsrfProtection::getToken();
                   hx-target="#dialog-job-form .formOuter"
                   hx-swap="beforeend">
 
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+                <input type="hidden" name="csrf_token" value="<?= Sanitize::e($csrfToken) ?>">
                 <?php if ($isEdit): ?>
                     <input type="hidden" name="job_id" value="<?= $jobId ?>">
                 <?php endif; ?>
@@ -112,7 +113,7 @@ $csrfToken = CsrfProtection::getToken();
                                                autocomplete="off" 
                                                autofocus 
                                                placeholder="e.g. Developer" 
-                                               value="<?= htmlspecialchars($jobData['position']) ?>" 
+                                               value="<?= Sanitize::e($jobData['position']) ?>" 
                                                required>
                                     </div>
                                     <div class="flex-cell flex-cell-50">
@@ -122,7 +123,7 @@ $csrfToken = CsrfProtection::getToken();
                                                name="company" 
                                                autocomplete="off" 
                                                placeholder="e.g. Spotify" 
-                                               value="<?= htmlspecialchars($jobData['company']) ?>" 
+                                               value="<?= Sanitize::e($jobData['company']) ?>" 
                                                required>
                                     </div>
                                 </div>
@@ -134,7 +135,7 @@ $csrfToken = CsrfProtection::getToken();
                                                id="job_department" 
                                                name="department" 
                                                placeholder="e.g. Core Engineering" 
-                                               value="<?= htmlspecialchars($jobData['department'] ?? '') ?>">
+                                               value="<?= Sanitize::e($jobData['department'] ?? '') ?>">
                                     </div>
                                     <div class="flex-cell flex-cell-50">
                                         <label for="job_salary">Salary:</label>
@@ -142,7 +143,7 @@ $csrfToken = CsrfProtection::getToken();
                                                id="job_salary" 
                                                name="salary_range" 
                                                placeholder="e.g. 35,000" 
-                                               value="<?= htmlspecialchars($jobData['salary_range'] ?? '') ?>">
+                                               value="<?= Sanitize::e($jobData['salary_range'] ?? '') ?>">
                                     </div>
                                 </div>
 
@@ -152,7 +153,7 @@ $csrfToken = CsrfProtection::getToken();
                                         <textarea name="notes" 
                                                   id="job_notes" 
                                                   class="tinymce_editor tinymce-hidden" 
-                                                  aria-hidden="true"><?= htmlspecialchars($jobData['notes'] ?? '') ?></textarea>
+                                                  aria-hidden="true"><?= Sanitize::e($jobData['notes'] ?? '') ?></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -240,7 +241,7 @@ $csrfToken = CsrfProtection::getToken();
                                                name="source" 
                                                placeholder="LinkedIn, Referral..." 
                                                style="margin-top: 0.3rem;"
-                                               value="<?= htmlspecialchars($jobData['source'] ?? '') ?>">
+                                               value="<?= Sanitize::e($jobData['source'] ?? '') ?>">
                                     </div>
                                 </div>
 
@@ -252,7 +253,7 @@ $csrfToken = CsrfProtection::getToken();
                                                id="job_applied_date" 
                                                name="applied_date" 
                                                style="margin-top: 0.3rem;"
-                                               value="<?= htmlspecialchars($jobData['applied_date'] ?? '') ?>">
+                                               value="<?= Sanitize::e($jobData['applied_date'] ?? '') ?>">
                                     </div>
                                     <div class="flex-cell flex-cell-50">
                                         <span class="form-label">Deadline</span>
@@ -260,7 +261,7 @@ $csrfToken = CsrfProtection::getToken();
                                                id="job_deadline" 
                                                name="deadline_date" 
                                                style="margin-top: 0.3rem;"
-                                               value="<?= htmlspecialchars($jobData['deadline_date'] ?? '') ?>">
+                                               value="<?= Sanitize::e($jobData['deadline_date'] ?? '') ?>">
                                     </div>
                                 </div>
                             </div>
@@ -277,7 +278,7 @@ $csrfToken = CsrfProtection::getToken();
                                                     tabindex="-1"
                                                     hx-delete="/jobs/dialog/delete/<?= $jobId ?>"
                                                     hx-confirm="Are you sure you want to delete this job application?"
-                                                    hx-headers='{"X-CSRF-Token": "<?= htmlspecialchars($csrfToken) ?>"}'
+                                                    hx-headers='{"X-CSRF-Token": "<?= Sanitize::e($csrfToken) ?>"}'
                                                     hx-target="#dialog-job-form .formOuter"
                                                     hx-swap="beforeend">
                                                 Delete application

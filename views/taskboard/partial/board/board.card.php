@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\UserController;
 
 /**
@@ -14,7 +15,7 @@ $members = $membersByBoard[$boardId] ?? [];
      title="Visit task board"
      hx-get="/board/select?boardid=<?php echo (int) $boardId; ?>"
      hx-trigger="click">
-    <h3><?php echo htmlspecialchars($boardName); ?></h3>
+    <h3><?php echo Sanitize::e($boardName); ?></h3>
     <p><?php echo $columnCount; ?> column<?php echo $columnCount !== 1 ? 's' : ''; ?></p>
 
     <?php if (!empty($members)): ?>
@@ -29,9 +30,9 @@ $members = $membersByBoard[$boardId] ?? [];
                 $ownerClass = $member['is_owner'] ? ' owner' : '';
                 ?>
                 <img class="board-member-avatar<?php echo $ownerClass; ?>"
-                     src="<?php echo htmlspecialchars($avatarUrl); ?>"
+                     src="<?php echo Sanitize::e($avatarUrl); ?>"
                      alt="Member avatar"
-                     title="<?php echo htmlspecialchars($member['username'] ?? 'Member'); ?>">
+                     title="<?php echo Sanitize::e($member['username'] ?? 'Member'); ?>">
             <?php endforeach; ?>
 
             <?php if ($extraCount > 0): ?>

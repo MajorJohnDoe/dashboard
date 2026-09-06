@@ -1,4 +1,5 @@
 <?php  
+use Dashboard\Core\Sanitize;
     use Dashboard\Taskboard\TaskController;
 
     // User wants to edit a task checklist
@@ -24,10 +25,10 @@
             <?php foreach ($checklistItems as $index => $item): ?>
                     <div class="flex-row">
                         <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                            <input type="checkbox" name="checklist[<?= $index; ?>][status]" tabindex="-1" value="complete" <?=$item['status'] === 'complete' ? 'checked' : ''; ?>/>
+                            <input type="checkbox" name="checklist[<?= $index; ?>][status]" tabindex="-1" value="complete" <?=($item['status'] ?? '') === 'complete' ? 'checked' : ''; ?>/>
                         </div>
                         <div class="flex-cell flex-cell-vcenter">
-                            <input type="text" name="checklist[<?= $index; ?>][description]" value="<?=htmlspecialchars(html_entity_decode($item['description'])); ?>" style="padding: 0.4rem;"/>
+                            <input type="text" name="checklist[<?= $index; ?>][description]" value="<?=Sanitize::e(html_entity_decode($item['description'] ?? '')); ?>"/>
                         </div>
                         <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
                             <button type="button" tabindex="-1" class="remove-item btn btn-dark-gray btn-hover-red" style="padding: 0.2rem 0.6rem;">X</button>

@@ -1,4 +1,5 @@
 <?php   
+use Dashboard\Core\Sanitize;
 use Dashboard\Taskboard\BoardController;
 
 // Initialize task board object
@@ -42,11 +43,11 @@ function renderLabelCheckbox($label, $isChecked = false) {
     $labelColor = safeGet($label, 'label_color', '#CCCCCC');
 
     echo '<div class="flex-row">
-            <div class="flex-cell flex-cell-shrink flex-vertical-center" style="background-color: ' . htmlspecialchars($labelColor) . ';">
-                <input type="checkbox" id="LabelId_'.htmlspecialchars($labelId).'" name="label[]" value="'.htmlspecialchars($labelId).'" '.$checked.' tabindex="-1">
+            <div class="flex-cell flex-cell-shrink flex-vertical-center" style="background-color: ' . Sanitize::e($labelColor) . ';">
+                <input type="checkbox" id="LabelId_'.Sanitize::e($labelId).'" name="label[]" value="'.Sanitize::e($labelId).'" '.$checked.' tabindex="-1">
             </div>
-            <label for="LabelId_'.htmlspecialchars($labelId).'" class="flex-cell flex-vertical-center" style="padding: 0 8px; cursor: pointer; background-color: '.htmlspecialchars($labelColor).';" tabindex="0">
-                '.htmlspecialchars($labelName).'
+            <label for="LabelId_'.Sanitize::e($labelId).'" class="flex-cell flex-vertical-center" style="padding: 0 8px; cursor: pointer; background-color: '.Sanitize::e($labelColor).';" tabindex="0">
+                '.Sanitize::e($labelName).'
             </label>
         </div>';
 }

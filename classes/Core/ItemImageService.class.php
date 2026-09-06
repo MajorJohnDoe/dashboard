@@ -1,6 +1,8 @@
 <?php
 namespace Dashboard\Core;
 
+use Dashboard\Core\Sanitize;
+
 use Dashboard\Core\Interfaces\DatabaseInterface;
 
 /**
@@ -82,7 +84,7 @@ class ItemImageService {
                 return $srcAttribute;
             }
 
-            return str_replace($matches[1], htmlspecialchars($imported, ENT_QUOTES), $srcAttribute);
+            return str_replace($matches[1], Sanitize::e($imported), $srcAttribute);
         }, $htmlContent);
 
         return $newContent ?? $htmlContent;
@@ -277,7 +279,13 @@ class ItemImageService {
         }
 
         foreach ($images as $image) {
-            $this->securelyDeleteFile($userId, $image['image_path']);
+            // The file may be shared with other items (duplicated tasks,
+            // schedule templates, spawned recurring tasks). Only unlink it
+            // when the last DB reference is going away; the rows for the
+            // deleted items are removed below either way.
+            if (!$this->isImageReferencedByOthers($image['image_path'], $itemType, $cleanIds)) {
+                $this->securelyDeleteFile($userId, $image['image_path']);
+            }
         }
 
         $this->db->q(
@@ -285,6 +293,90 @@ class ItemImageService {
             $types,
             ...$params
         );
+    }
+
+    /**
+     * Whether any OTHER item (outside the given exclusion list for the given
+     * item type) still holds a reference to the same image file.
+     *
+     * @param string   $imagePath      Web-relative image path (e.g. /user_upload/1/2026/01/img.png).
+     * @param string   $itemType       Item type of the items being deleted.
+     * @param int[]    $excludeItemIds Item IDs of the items being deleted.
+     */
+    private function isImageReferencedByOthers(string $imagePath, string $itemType, array $excludeItemIds): bool {
+        $placeholders = implode(',', array_fill(0, count($excludeItemIds), '?'));
+        $types = 's' . str_repeat('i', count($excludeItemIds));
+        $refs = $this->db->q(
+            "SELECT COUNT(*) AS cnt FROM `shared_item_images`
+             WHERE `image_path` = ? AND NOT (`item_type` = ? AND `item_id` IN ($placeholders))",
+            $types,
+            $imagePath,
+            $itemType,
+            ...$excludeItemIds
+        );
+        return ((int)($refs[0]['cnt'] ?? 0)) > 0;
+    }
+
+    /**
+     * Copy all image references from one item to another, pointing at the
+     * same files on disk.
+     *
+     * Used whenever content is duplicated into a new owner — task duplicate,
+     * recurring schedule template ("Make recurring"), and each task spawned
+     * from a schedule — so the new owner holds its own DB reference. Removal
+     * of the image from any single owner then cannot break the others:
+     * file deletion is reference-counted (see deleteAllForItems() and
+     * SharedImageHandler::collectImagesToDelete()).
+     *
+     * Must be called inside a database transaction by the caller (same
+     * requirement as processAndPersist()).
+     *
+     * @param int    $fromItemId   Source item ID.
+     * @param string $fromItemType Source item type (e.g. 'task', 'schedule').
+     * @param int    $toItemId     Target item ID.
+     * @param string $toItemType   Target item type.
+     */
+    public function copyImageReferences(int $fromItemId, string $fromItemType, int $toItemId, string $toItemType): void {
+        if ($fromItemId <= 0 || $toItemId <= 0 || $fromItemType === '' || $toItemType === '') {
+            return;
+        }
+
+        // Skip files the target already owns (e.g. repeated migration).
+        $owned = $this->db->q(
+            "SELECT image_path FROM `shared_item_images` WHERE `item_id` = ? AND `item_type` = ?",
+            "is",
+            $toItemId,
+            $toItemType
+        );
+        $ownedPaths = [];
+        foreach ((is_array($owned) ? $owned : []) as $row) {
+            $ownedPaths[$row['image_path']] = true;
+        }
+
+        $rows = $this->db->q(
+            "SELECT image_name, image_path, upload_type, file_size FROM `shared_item_images`
+             WHERE `item_id` = ? AND `item_type` = ?",
+            "is",
+            $fromItemId,
+            $fromItemType
+        );
+
+        foreach ((is_array($rows) ? $rows : []) as $row) {
+            if (isset($ownedPaths[$row['image_path']])) {
+                continue;
+            }
+            $this->db->q(
+                "INSERT INTO `shared_item_images` (`item_id`, `item_type`, `image_name`, `image_path`, `upload_type`, `file_size`)
+                 VALUES (?, ?, ?, ?, ?, ?)",
+                "isssii",
+                $toItemId,
+                $toItemType,
+                $row['image_name'],
+                $row['image_path'],
+                (int)$row['upload_type'],
+                (int)($row['file_size'] ?? 0)
+            );
+        }
     }
 
     /**

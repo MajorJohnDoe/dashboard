@@ -17,7 +17,7 @@
  * Item descriptor fields:
  *   - id        (string)  unique id within the menu (for debugging/aria)
  *   - label     (string)  display text
- *   - icon      (string)  optional Font Awesome class, e.g. 'fa-pencil'
+ *   - icon      (string)  optional unicode glyph (or inline text), e.g. '↻'
  *   - danger    (bool)    render in the danger (red) style
  *   - disabled  (bool)    render as non-interactive
  *   - submenu   (array)   nested items; opens as a flyout on hover/click
@@ -72,9 +72,8 @@ const ContextMenuManager = (() => {
         const icon = document.createElement('span');
         icon.className = 'context-menu-icon';
         if (item.icon) {
-            const i = document.createElement('i');
-            i.className = item.icon.indexOf('fa-') === 0 ? 'fa ' + item.icon : item.icon;
-            icon.appendChild(i);
+            // Icon is a unicode glyph — render it as text, not a class name.
+            icon.textContent = item.icon;
         }
         el.appendChild(icon);
 

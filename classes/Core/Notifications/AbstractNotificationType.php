@@ -104,12 +104,4 @@ abstract class AbstractNotificationType implements NotificationTypeInterface
     {
         return [];
     }
-
-    /**
-     * Helper to safely escape HTML in notification content
-     */
-    protected function htmlspecialchars(string $value): string
-    {
-        return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
-    }
 }

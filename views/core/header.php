@@ -6,6 +6,7 @@
     <meta name="csrf-token" content="<?= \Dashboard\Core\CsrfProtection::getToken() ?>">
     <title><?= $options['title'] ?? 'Hyperboard' ?></title>
     <?php
+use Dashboard\Core\Sanitize;
     // Cache-bust with file modification time (stable until a file actually changes,
     // unlike time() which defeats caching on every request).
     $assetVersion = fn(string $relPath): string => filemtime(BASE_DIR . $relPath) ?: time();
@@ -19,7 +20,6 @@
     <?php foreach ($options['external_js'] ?? [] as $js): ?>
         <script src="<?= $js ?>" defer></script>
     <?php endforeach; ?>
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400..700&display=swap" rel="stylesheet">
@@ -101,7 +101,7 @@
                 </div>
 
                 <?php if (isset($user) && $user !== null): ?>
-                    <a href="/logout" class="btn btn-green">Logout (<?= htmlspecialchars($user->user_id()) ?>)</a>
+                    <a href="/logout" class="btn btn-green">Logout (<?= Sanitize::e($user->user_id()) ?>)</a>
                 <?php endif; ?>
             </li>
         </ul>

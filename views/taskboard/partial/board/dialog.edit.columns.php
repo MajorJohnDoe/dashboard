@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\ColumnController;
     
@@ -28,13 +29,13 @@ $result = $controller->getColumnsForBoard($activeBoardId);
 $boardColumns = $result['success'] ? ($result['columns'] ?? []) : [];
 ?>
 
-<form id="form_addColumn" hx-post="<?=htmlspecialchars($postUrl);?>" hx-target="#list-Columns-edit-board" hx-swap="innerHTML">
+<form id="form_addColumn" hx-post="<?=Sanitize::e($postUrl);?>" hx-target="#list-Columns-edit-board" hx-swap="innerHTML">
     <?= \Dashboard\Core\CsrfProtection::getTokenField() ?>
     <div class="flex-table edit-board-column-list">
         <div class="flex-row">
             <?php if ($boardColumns) : ?>
                 <?php foreach ($boardColumns as $column) : ?>
-                    <div class="flex-cell"><?=htmlspecialchars($column['column_name']);?></div>
+                    <div class="flex-cell"><?=Sanitize::e($column['column_name']);?></div>
                 <?php endforeach; ?>
             <?php endif; ?>
         </div>

@@ -206,7 +206,19 @@ const ChecklistManager = (() => {
      */
     function handleAddChecklistItem() {
         console.log('Add item clicked');
-        const container = document.getElementById('checklist-items');
+        // Multiple dialogs can be in the DOM at once (e.g. task edit dialog +
+        // recurring-schedule dialog both contain a checklist). Target the one
+        // inside the visible (.show) modal; fall back to the first match.
+        const containers = document.querySelectorAll('#checklist-items');
+        if (containers.length === 0) return;
+        let container = containers[0];
+        if (containers.length > 1) {
+            const visible = Array.from(containers).find(el => {
+                const modal = el.closest('.modal-container');
+                return !modal || modal.classList.contains('show');
+            });
+            if (visible) container = visible;
+        }
         const existingRows = container.querySelectorAll('.flex-row').length;
 
         if(existingRows >= MAX_CHECKLIST_ITEMS) {
@@ -214,30 +226,55 @@ const ChecklistManager = (() => {
             return;
         }
 
-        const newItem = createChecklistItemElement();
+        const newItem = createChecklistItemElement(existingRows);
         container.appendChild(newItem);
+        syncChecklistEmptyState(container);
         newItem.querySelector('input[type="text"]').focus();
     }
 
     /**
      * Creates a new checklist item element
+     * @param {number} index - Row index used to pair the status/description
+     *                        inputs (checklist[N][status], checklist[N][description]).
      * @return {HTMLElement} New checklist item element
      */
-    function createChecklistItemElement() {
+    function createChecklistItemElement(index) {
         const newItem = document.createElement('div');
         newItem.classList.add('flex-row');
         newItem.innerHTML = `
             <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                <input type="checkbox" tabindex="-1" name="checklist[][checked]" />
+                <input type="checkbox" tabindex="-1" name="checklist[${index}][status]" value="complete" />
             </div>
             <div class="flex-cell flex-cell-vcenter">
-                <input type="text" name="checklist[][description]" value="" style="padding: 0.4rem;" />
+                <input type="text" name="checklist[${index}][description]" value="" />
             </div>
             <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                <button type="button" tabindex="-1" class="remove-item btn btn-dark-gray btn-hover-red remove-item" style="padding: 0.2rem 0.6rem;">X</button>
+                <button type="button" tabindex="-1" class="remove-item btn btn-dark-gray btn-hover-red remove-item schedule-checklist-remove">X</button>
             </div>
         `;
         return newItem;
+    }
+
+    /**
+     * Shows/hides the schedule checklist "no items" placeholder depending on
+     * whether the container has rows. The placeholder is only (re-)injected
+     * in the schedule dialog (scoped by .schedule-checklist) — the task
+     * dialog has no equivalent empty state.
+     * @param {HTMLElement} container - The #checklist-items container
+     */
+    function syncChecklistEmptyState(container) {
+        const empty = container.querySelector('.schedule-checklist-empty');
+        const hasRows = container.querySelector('.flex-row') !== null;
+        if (hasRows) {
+            if (empty) empty.remove();
+            return;
+        }
+        if (!empty && container.closest('.schedule-checklist')) {
+            container.insertAdjacentHTML(
+                'beforeend',
+                '<div class="schedule-checklist-empty">No checklist items — spawned tasks won\'t include one.</div>'
+            );
+        }
     }
 
     /**
@@ -248,6 +285,8 @@ const ChecklistManager = (() => {
         if (e.target.classList.contains('remove-item')) {
             console.log('Remove item clicked');
             e.target.closest('.flex-row').remove();
+            const container = e.target.closest('#checklist-items');
+            if (container) syncChecklistEmptyState(container);
         }
     }
 
@@ -273,11 +312,15 @@ const EventManager = (() => {
      * @param {Function} handler - Event handler function
      */
     function attachListenerOnce(id, event, handler) {
-        const element = document.getElementById(id);
-        if (element && !element.dataset.listenerAttached) {
-            element.dataset.listenerAttached = "true";
-            element.addEventListener(event, handler);
-        }
+        // Several dialogs can hold elements with the same id (task edit +
+        // schedule edit both have #add-item / #checklist-items), so attach to
+        // every match that hasn't been bound yet.
+        document.querySelectorAll(`[id="${id}"]`).forEach(element => {
+            if (!element.dataset.listenerAttached) {
+                element.dataset.listenerAttached = "true";
+                element.addEventListener(event, handler);
+            }
+        });
     }
 
     /**
@@ -466,14 +509,14 @@ const TaskContextMenu = (() => {
      */
     function buildItems(taskEl) {
         return [
-            { id: 'edit', label: 'Edit', icon: 'fa-pencil', action: openEditDialog },
-            { id: 'duplicate', label: 'Duplicate', icon: 'fa-files-o', action: openDuplicateDialog },
-            { id: 'recurring', label: 'Make recurring', icon: 'fa-repeat', action: openRecurrencePanel },
+            { id: 'edit', label: 'Edit', icon: '✎', action: openEditDialog },
+            { id: 'duplicate', label: 'Duplicate', icon: '⧉', action: openDuplicateDialog },
+            { id: 'recurring', label: 'Make recurring', icon: '↻', action: openRecurrencePanel },
             { separator: true },
             {
                 id: 'priority',
                 label: 'Change priority',
-                icon: 'fa-flag',
+                icon: '⚑',
                 submenu: PRIORITY_LABELS.map((name, value) => ({
                     id: 'priority-' + value,
                     label: name,
@@ -481,7 +524,7 @@ const TaskContextMenu = (() => {
                 })),
             },
             { separator: true },
-            { id: 'delete', label: 'Delete task', icon: 'fa-trash-o', danger: true, action: confirmDelete },
+            { id: 'delete', label: 'Delete task', icon: '🗑', danger: true, action: confirmDelete },
         ];
     }
 

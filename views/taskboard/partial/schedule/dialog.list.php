@@ -1,4 +1,5 @@
 <?php
+use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\TaskScheduleController;
 
@@ -15,6 +16,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && isset($_GET['schedule_id'])) {
             [
                 HtmxEvents::TASK_BOARD_COLUMN_LIST => true,
                 HtmxEvents::REFRESH_SCHEDULE_LIST => true,
+                // No-op when the edit modal isn't open; closes it when the
+                // delete was issued from inside the edit dialog.
+                HtmxEvents::CLOSE_SPECIFIC_MODAL => ['dialog-schedule-edit'],
             ]
         ));
     } else {
@@ -97,13 +101,13 @@ $totalSchedules = count($schedules);
                                      hx-target="body"
                                      hx-swap="beforeend">
                                     <div style="flex: 1; min-width: 0;">
-                                        <div class="title" title="<?= htmlspecialchars(html_entity_decode($schedule['task_title']), ENT_QUOTES, 'UTF-8') ?>">
-                                            <?= htmlspecialchars(html_entity_decode($schedule['task_title']), ENT_QUOTES, 'UTF-8') ?>
+                                        <div class="title" title="<?= Sanitize::e(html_entity_decode($schedule['task_title'])) ?>">
+                                            <?= Sanitize::e(html_entity_decode($schedule['task_title'])) ?>
                                         </div>
                                         <div class="schedule-rule-text">
-                                            <?= htmlspecialchars($ruleSummary) ?>
+                                            <?= Sanitize::e($ruleSummary) ?>
                                             <?php if (!empty($endSummary)): ?>
-                                                &middot; <span class="schedule-end"><?= htmlspecialchars($endSummary) ?></span>
+                                                &middot; <span class="schedule-end"><?= Sanitize::e($endSummary) ?></span>
                                             <?php endif; ?>
                                         </div>
                                         <div class="schedule-card-sub">
@@ -111,7 +115,7 @@ $totalSchedules = count($schedules);
                                                 <span class="schedule-status-dot <?= $isActive ? 'schedule-status-active' : 'schedule-status-paused' ?>"
                                                       title="<?= $isActive ? 'Active' : 'Paused' ?>"></span>
                                                 <span class="schedule-next">
-                                                    <?php if ($nextRun): ?>Next <strong><?= htmlspecialchars($nextRun) ?></strong><?php endif; ?>
+                                                    <?php if ($nextRun): ?>Next <strong><?= Sanitize::e($nextRun) ?></strong><?php endif; ?>
                                                 </span>
                                                 <span class="schedule-count"><?= (int)$schedule['run_count'] ?> run<?= (int)$schedule['run_count'] === 1 ? '' : 's' ?></span>
                                             <?php else: ?>

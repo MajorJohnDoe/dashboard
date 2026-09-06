@@ -2,6 +2,7 @@
 namespace Dashboard\Taskboard;
 
 use Dashboard\Core\Interfaces\DatabaseInterface;
+use Dashboard\Core\ItemImageService;
 
 /**
  * Model for recurring task schedules (tm_task_schedule).
@@ -416,6 +417,16 @@ class TaskSchedule
                 }
             }
         }
+
+        // The spawned task gets its own image references pointing at the
+        // template's files, so deleting the template (or any other copy)
+        // cannot pull the files out from under this task.
+        (new ItemImageService($this->db))->copyImageReferences(
+            (int)$schedule['schedule_id'],
+            'schedule',
+            $taskId,
+            'task'
+        );
 
         return $taskId;
     }
@@ -867,21 +878,40 @@ class TaskSchedule
     }
 
     /**
-     * Normalize checklist input to a JSON string or null.
+     * Normalize checklist input to a JSON string of
+     * [['description' => ..., 'status' => 'complete'|'incomplete'], ...] or null.
+     *
+     * Accepts a JSON string or an array of rows (as posted by the checklist
+     * UI). Rows with an empty description are dropped; a missing/unchecked
+     * status defaults to 'incomplete' so every stored item always has both
+     * keys (the task dialog checklist partial reads them unguarded).
      */
     private function normalizeChecklist(mixed $checklist): ?string
     {
         if (is_string($checklist)) {
             $decoded = json_decode($checklist, true);
-            if (is_array($decoded) && !empty($decoded)) {
-                return json_encode(array_values($decoded));
-            }
+            $checklist = is_array($decoded) ? $decoded : [];
+        }
+        if (!is_array($checklist) || empty($checklist)) {
             return null;
         }
-        if (is_array($checklist) && !empty($checklist)) {
-            return json_encode(array_values($checklist));
+
+        $items = [];
+        foreach ($checklist as $item) {
+            if (!is_array($item)) {
+                continue;
+            }
+            $description = trim((string)($item['description'] ?? ''));
+            if ($description === '') {
+                continue;
+            }
+            $items[] = [
+                'description' => $description,
+                'status'      => (($item['status'] ?? '') === 'complete') ? 'complete' : 'incomplete',
+            ];
         }
-        return null;
+
+        return !empty($items) ? json_encode(array_values($items)) : null;
     }
 
     /**
