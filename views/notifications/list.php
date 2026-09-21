@@ -47,6 +47,14 @@ $controller = new NotificationsController($db, $user, null);
             
             $iconUrl = $renderer->getIcon();
             $actions = $renderer->getActions();
+
+            // Notification handlers expose their icon as a URL from the shared
+            // assets/img set. Inline it through svgIcon() so the icon inherits
+            // .notification-avatar.system's color (currentColor) and a missing
+            // file degrades to nothing instead of a broken <img>.
+            $iconFile = $iconUrl !== null ? $iconUrl : '/assets/img/icon_settings.svg';
+            $iconName = preg_replace('/^(icon_)?(.*)\.svg$/', '$2', basename((string)$iconFile));
+            $iconSvg = svgIcon((string)$iconName);
             ?>
             
             <div class="notification-item <?php echo $isUnread ? 'unread' : ''; ?>" 
@@ -55,7 +63,11 @@ $controller = new NotificationsController($db, $user, null);
                 
                 <div class="notification-avatar <?php echo $isSystem ? 'system' : ''; ?>">
                     <?php if ($isSystem || empty($avatarUrl)): ?>
-                        <img src="<?php echo $iconUrl !== null ? $iconUrl : '/assets/img/icon_settings.svg'; ?>" alt="System">
+                        <?php if ($iconSvg !== ''): ?>
+                            <?= $iconSvg ?>
+                        <?php else: ?>
+                            <img src="<?php echo Sanitize::e($iconFile); ?>" alt="System">
+                        <?php endif; ?>
                     <?php else: ?>
                         <img src="<?php echo (!empty($avatarUrl) ? $avatarUrl : '/assets/img/default_profile.jpg'); ?>" alt="User">
                     <?php endif; ?>

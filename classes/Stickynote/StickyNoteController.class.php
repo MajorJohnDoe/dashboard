@@ -4,6 +4,7 @@ namespace Dashboard\Stickynote;
 use Dashboard\Core\User;
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\ItemImageService;
+use Dashboard\Core\AttachmentService;
 use Dashboard\Stickynote\StickyNote;
 use Dashboard\Stickynote\StickyCategory;
 
@@ -110,7 +111,10 @@ class StickyNoteController {
                 try {
                     // Get the images associated with this note
                     $images = $this->stickyNote->getNoteImages($note_id, $this->user->getUserId());
-                    
+
+                    // Delete document attachments (files + item_attachments rows)
+                    (new AttachmentService($this->db))->deleteAllForItem((int)$this->user->getUserId(), (int)$note_id, 'stickynote');
+
                     // Delete the note
                     $result = $this->stickyNote->delete($note_id, $this->user->getUserId());
                     

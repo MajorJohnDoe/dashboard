@@ -428,6 +428,17 @@ class TaskSchedule
             'task'
         );
 
+        // Attachments are copied as independent files + rows owned by the
+        // spawned task (schedule templates don't hold attachments directly;
+        // they inherit from the task that was made recurring).
+        (new \Dashboard\Core\AttachmentService($this->db))->copyAttachments(
+            (int)$schedule['user_id'],
+            (int)$schedule['schedule_id'],
+            'schedule',
+            $taskId,
+            'task'
+        );
+
         return $taskId;
     }
 

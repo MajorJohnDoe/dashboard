@@ -31,6 +31,9 @@ class CoreRoutes extends AbstractRouteRegistrar {
 
             // Account settings modal
             [['GET', 'POST'], '/account/settings', 'core/partial/modal.profile', 'type' => 'partial', 'middleware' => $this->auth()],
+
+            // Per-user UI preferences: edit-dialog tab order (drag to reorder)
+            ['POST', '/ui/tab-order', 'Core\UiPreferenceController@handleSaveTabOrder', 'type' => 'partial', 'middleware' => $this->auth()],
         ]);
     }
 }

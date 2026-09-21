@@ -88,6 +88,25 @@ CREATE TABLE `shared_item_images` (
   `file_size` int(10) UNSIGNED DEFAULT NULL COMMENT 'File size in kilobytes (KB)'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Document attachments (PDF, txt, docx, xlsx) for tasks, sticky notes and
+-- job applications. Polymorphic item_id + item_type discriminator, same
+-- pattern as shared_item_images. Files live under user_upload/<userId>/...
+-- and are served ONLY through the authenticated /attachment/download route.
+CREATE TABLE IF NOT EXISTS `item_attachments` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `item_id` int(11) NOT NULL,
+  `item_type` ENUM('task', 'stickynote', 'job') NOT NULL,
+  `original_filename` VARCHAR(255) NOT NULL,
+  `stored_path` VARCHAR(255) NOT NULL COMMENT 'Web-relative path, e.g. /user_upload/1/2026/01/doc_task12_xxx.pdf',
+  `mime_type` VARCHAR(100) NOT NULL,
+  `file_size` INT(10) UNSIGNED NOT NULL DEFAULT 0 COMMENT 'Bytes',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `idx_item` (`item_type`, `item_id`),
+  KEY `idx_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 CREATE TABLE `sticky_categories` (
   `id` int(11) NOT NULL,
@@ -249,6 +268,22 @@ CREATE TABLE `user_session` (
 
 INSERT INTO `user_session` (`id`, `session`, `token`, `userid`, `sess_start`, `sess_expire`, `last_activity`, `ip`, `user_agent`) VALUES
 (157, 'eeea4ed271e3234d583416a7713490d6', 'a7049ff9caa4bd834b661f69759e7d496236a18384c676d44b02500df4298dbb', 3831, '2024-09-24 10:06:33', '2024-10-24 10:06:33', '2024-09-24 10:06:33', '172.55.0.3', NULL);
+
+
+
+-- Per-user UI preferences (edit-dialog tab order, etc.). One row per user +
+-- key; the value is JSON so a new preference never needs a schema change.
+-- UiPreferenceService reads fail-safe (defaults when the table is missing), but
+-- the order only persists across sessions once this table exists.
+CREATE TABLE IF NOT EXISTS `user_ui_preference` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` mediumint(8) NOT NULL,
+  `preference_key` varchar(64) NOT NULL COMMENT 'e.g. tab_order:task',
+  `preference_value` text DEFAULT NULL COMMENT 'JSON',
+  `modified` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_preference` (`user_id`, `preference_key`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
 

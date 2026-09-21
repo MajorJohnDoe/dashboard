@@ -898,6 +898,22 @@
     pointer-events: none;
 }
 
+/* Attachment indicator on task cards — sits on the same bottom line as
+   the recurring ↻ icon, offset left so both fit on one card. The view
+   emits 📎 + U+FE0E (text presentation), so on browsers honoring it the
+   glyph renders monochrome; where not supported, grayscale filter
+   normalizes the color emoji to match the ↻'s subtle look. */
+.tm-task-attachment-icon {
+    position: absolute;
+    right: 1.55rem;
+    bottom: 0.15rem;
+    font-size: 0.85em;
+    line-height: 1;
+    opacity: 0.65;
+    filter: grayscale(1) brightness(1.9);
+    pointer-events: none;
+}
+
 .schedule-paused-label {
     font-style: italic;
 }

@@ -229,6 +229,7 @@ const ChecklistManager = (() => {
         const newItem = createChecklistItemElement(existingRows);
         container.appendChild(newItem);
         syncChecklistEmptyState(container);
+        syncChecklistTabBadge(container);
         newItem.querySelector('input[type="text"]').focus();
     }
 
@@ -278,16 +279,47 @@ const ChecklistManager = (() => {
     }
 
     /**
+     * Mirrors the row count into the Checklist tab badge. Only the task edit
+     * dialog has a tab bar - the schedule dialog's checklist has no tabs, so
+     * the lookup finds nothing and the function returns quietly.
+     * @param {HTMLElement} container - The #checklist-items container
+     */
+    function syncChecklistTabBadge(container) {
+        if (!container || typeof ModalTabsManager === 'undefined') return;
+        const modal = container.closest('.modal-container');
+        const tabs = modal && modal.querySelector('[data-modal-tabs]');
+        if (!tabs) return;
+
+        const count = container.querySelectorAll('.flex-row').length;
+        ModalTabsManager.setBadge(tabs, 'checklist', count);
+
+        // An emptied checklist hides its tab when the user switches away, so the
+        // sidebar "Checklist" button has to be usable again to bring it back —
+        // the server renders it disabled for a checklist that still has items.
+        const revealBtn = modal.querySelector('[data-switch-tab="checklist"]');
+        if (revealBtn && count === 0) {
+            revealBtn.disabled = false;
+        }
+    }
+
+    /**
      * Handles removing a checklist item
      * @param {Event} e - Click event
      */
     function handleRemoveChecklistItem(e) {
-        if (e.target.classList.contains('remove-item')) {
-            console.log('Remove item clicked');
-            e.target.closest('.flex-row').remove();
-            const container = e.target.closest('#checklist-items');
-            if (container) syncChecklistEmptyState(container);
-        }
+        const removeBtn = e.target.closest('.remove-item');
+        if (!removeBtn) return;
+
+        // Resolve the container BEFORE detaching the row: once the row is out of
+        // the document, closest('#checklist-items') returns null and the badge /
+        // empty-state sync below would be skipped.
+        const container = removeBtn.closest('#checklist-items');
+        const row = removeBtn.closest('.flex-row');
+        if (row) row.remove();
+        if (!container) return;
+
+        syncChecklistEmptyState(container);
+        syncChecklistTabBadge(container);
     }
 
     return { handleAddChecklistItem, handleRemoveChecklistItem };

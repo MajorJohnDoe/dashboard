@@ -337,19 +337,56 @@ const TinyMCEManager = (() => {
     }
 
     function checkAndInitTinyMCE(node) {
-        if (node.nodeType === 1 && node.matches('.tinymce_editor')) {
+        if (node.nodeType !== 1) return;
+
+        // TinyMCE rewrites its own UI constantly (toolbars, menus, iframes) and
+        // moves the source textarea into .tox-tinymce. Scanning those subtrees
+        // is wasted work and used to re-initialise the editor on every change.
+        if (node.closest && node.closest('.tox-tinymce')) return;
+
+        if (node.matches('.tinymce_editor')) {
             initTinyMCE(node);
-        } else if (node.nodeType === 1 && node.hasChildNodes()) {
+        } else if (node.hasChildNodes()) {
             Array.from(node.querySelectorAll('.tinymce_editor')).forEach(initTinyMCE);
         }
     }
 
+    /**
+     * The submit control that belongs to a form.
+     *
+     * Dialog save buttons sit outside the form (linked with form="…") and are
+     * <button type="submit">, while a form can also contain other submit inputs
+     * (e.g. the resolved-task "Move task" button) — so the primary control is
+     * marked with data-form-submit.
+     *
+     * @param {HTMLFormElement} form
+     * @return {HTMLElement|null}
+     */
+    function findFormSubmit(form) {
+        if (!form) return null;
+
+        const scope = form.closest('.modal-container') || document;
+        const marked = scope.querySelector('[data-form-submit]');
+        if (marked) return marked;
+
+        return form.querySelector('input[type="submit"], button[type="submit"]')
+            || (form.id ? document.querySelector(`[form="${form.id}"][type="submit"]`) : null);
+    }
+
     function initTinyMCE(element) {
-        const existingInstance = tinymce.get(element.id);
+        const existingInstance = element.id ? tinymce.get(element.id) : null;
 
         if (existingInstance) {
+            // Same element → already live. The MutationObserver sees it again
+            // once TinyMCE has moved it into its own UI, so bail out instead of
+            // tearing the editor down and rebuilding it.
+            if (existingInstance.getElement() === element) {
+                return;
+            }
+            // Genuinely stale instance: htmx replaced the modal, so tinymce
+            // still references the removed element.
             existingInstance.remove();
-            console.log('removing existing instance, initializing a new instance');
+            console.log('removing stale TinyMCE instance for #' + element.id);
         }
 
             const mceFontSize = window.innerWidth <= 2000 ? '13px' : '15px';
@@ -368,11 +405,8 @@ const TinyMCEManager = (() => {
                 editor.ui.registry.addButton('savetask', {
                     text: 'Save',
                     onAction: (_) => {
-                        const form = editor.getElement().closest('form');
-                        if (form) {
-                            const submitButton = form.querySelector('input[type="submit"]');
-                            if (submitButton) submitButton.click();
-                        }
+                        const submitButton = findFormSubmit(editor.getElement().closest('form'));
+                        if (submitButton) submitButton.click();
                     }
                 });
             },
@@ -386,11 +420,8 @@ const TinyMCEManager = (() => {
 
                 editor.addShortcut("ctrl+s", "Custom Ctrl+S", "custom_ctrl_s");
                 editor.addCommand("custom_ctrl_s", function() {
-                    const form = editor.getElement().closest('form');
-                    if (form) {
-                        const submitButton = form.querySelector('input[type="submit"]');
-                        if (submitButton) submitButton.click();
-                    }
+                    const submitButton = findFormSubmit(editor.getElement().closest('form'));
+                    if (submitButton) submitButton.click();
                 });
             }
         });
@@ -781,6 +812,485 @@ const TableFilterManager = (() => {
     return { init, bindFilterGroup };
 })();
 
+// ============================================================================
+// Modal tabs (Description / Checklist / Attachments) + attachment uploads
+// Tabs appear conditionally: Checklist/Attachments tabs are hidden until the
+// content exists or the user initiates adding one. Badges show item counts.
+// ============================================================================
+
+const ModalTabsManager = (() => {
+
+    /** Tab currently being dragged (see the drag handlers below). */
+    let draggedTab = null;
+
+    /**
+     * Activate a tab within a tab group.
+     * @param {HTMLElement} tabsContainer - element with [data-modal-tabs]
+     * @param {string} tabName - value of data-tab to activate
+     */
+    function activateTab(tabsContainer, tabName) {
+        if (!tabsContainer) return;
+
+        tabsContainer.querySelectorAll('.modal-tab').forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.tab === tabName);
+        });
+
+        const modal = tabsContainer.closest('.modal-container');
+        if (modal) {
+            modal.querySelectorAll('.modal-tab-pane').forEach(pane => {
+                pane.classList.toggle('active', pane.dataset.tabPane === tabName);
+            });
+        }
+
+        hideEmptyConditionalTabs(tabsContainer, tabName);
+    }
+
+    /**
+     * Retire conditional tabs ([data-tab-hide-when-empty]) that are no longer
+     * active and hold nothing, so an emptied pane stops advertising itself.
+     * The active tab is never hidden - its pane would become unreachable - and
+     * tabs without a badge are left alone (nothing to measure).
+     */
+    function hideEmptyConditionalTabs(tabsContainer, activeTabName) {
+        tabsContainer.querySelectorAll('.modal-tab[data-tab-hide-when-empty]').forEach(tab => {
+            if (tab.dataset.tab === activeTabName) return;
+
+            const badge = tab.querySelector('.modal-tab-badge');
+            if (!badge || (parseInt(badge.textContent, 10) || 0) > 0) return;
+
+            tab.hidden = true;
+            badge.hidden = true;
+        });
+    }
+
+    /**
+     * Reveal a conditional tab (remove hidden) and activate it.
+     * Used when the user adds a checklist / first attachment.
+     */
+    function revealTab(tabsContainer, tabName) {
+        if (!tabsContainer) return;
+        const tab = tabsContainer.querySelector(`.modal-tab[data-tab="${tabName}"]`);
+        if (tab) {
+            tab.hidden = false;
+            const badge = tab.querySelector('.modal-tab-badge');
+            if (badge) badge.hidden = false;
+        }
+        activateTab(tabsContainer, tabName);
+    }
+
+    /**
+     * Update a tab badge count. The badge mirrors its tab: it is visible
+     * whenever the tab is visible (a "0" still tells the user the pane exists
+     * but is empty) and hidden together with a hidden tab. A tab that was
+     * retired while empty comes back as soon as it has content again.
+     */
+    function setBadge(tabsContainer, tabName, count) {
+        if (!tabsContainer) return;
+        const badge = tabsContainer.querySelector(`.modal-tab-badge[data-tab-badge="${tabName}"]`);
+        if (!badge) return;
+        badge.textContent = String(count);
+
+        const tab = tabsContainer.querySelector(`.modal-tab[data-tab="${tabName}"]`);
+        if (tab && tab.hidden && count > 0) {
+            tab.hidden = false;
+        }
+        badge.hidden = !!tab && tab.hidden;
+    }
+
+    /**
+     * Add to a tab badge count (e.g. one more attachment) and reveal the tab
+     * when this is the first item — the tab itself appears only once content
+     * exists, so a count of 1 must also unhide it.
+     */
+    function incrementBadge(tabsContainer, tabName, amount = 1) {
+        if (!tabsContainer) return;
+        const badge = tabsContainer.querySelector(`.modal-tab-badge[data-tab-badge="${tabName}"]`);
+        if (!badge) return;
+
+        const tab = tabsContainer.querySelector(`.modal-tab[data-tab="${tabName}"]`);
+        if (tab && tab.hidden) {
+            tab.hidden = false;
+        }
+
+        setBadge(tabsContainer, tabName, (parseInt(badge.textContent, 10) || 0) + amount);
+    }
+
+    // --- Drag to reorder tabs ------------------------------------------------
+    // Native HTML5 drag & drop: SortableJS is only loaded on the board page,
+    // while the tab bar appears in dialogs on three different pages. The
+    // resulting order is persisted per user + context (UiPreferenceService).
+
+    /** Mark tabs as draggable — called for tabs already in the DOM and after swaps. */
+    function enableTabDragging(root) {
+        if (!root || !root.querySelectorAll) return;
+        root.querySelectorAll('.modal-tab').forEach(tab => { tab.draggable = true; });
+    }
+
+    function handleDragStart(event) {
+        const tab = event.target.closest('.modal-tab');
+        if (!tab || tab.hidden || !tab.closest('[data-modal-tabs]')) return;
+
+        draggedTab = tab;
+        tab.classList.add('modal-tab-dragging');
+
+        if (event.dataTransfer) {
+            // Firefox only starts a drag once some data is set.
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', tab.dataset.tab || '');
+        }
+    }
+
+    /** Live preview: keep the dragged tab next to the one being hovered. */
+    function handleDragOver(event) {
+        if (!draggedTab) return;
+
+        const tabsContainer = draggedTab.closest('[data-modal-tabs]');
+        const target = event.target.closest('.modal-tab');
+        if (!tabsContainer || !target || target === draggedTab || target.hidden) return;
+        if (target.parentElement !== tabsContainer) return;
+
+        event.preventDefault();
+        const box = target.getBoundingClientRect();
+        const insertAfter = event.clientX > box.left + box.width / 2;
+        tabsContainer.insertBefore(draggedTab, insertAfter ? target.nextSibling : target);
+    }
+
+    function handleDrop(event) {
+        if (draggedTab) event.preventDefault();
+    }
+
+    function handleDragEnd() {
+        const tab = draggedTab;
+        draggedTab = null;
+        if (!tab) return;
+
+        tab.classList.remove('modal-tab-dragging');
+
+        const tabsContainer = tab.closest('[data-modal-tabs]');
+        if (tabsContainer) saveTabOrder(tabsContainer);
+    }
+
+    /** Persist the visual order of a tab bar for its context. */
+    function saveTabOrder(tabsContainer) {
+        const context = tabsContainer.dataset.tabOrderContext;
+        if (!context || typeof Http === 'undefined' || typeof APP_ROUTES === 'undefined') return;
+
+        const tabs = Array.from(tabsContainer.querySelectorAll('.modal-tab'))
+            .map(tab => tab.dataset.tab)
+            .filter(Boolean);
+
+        // fetchJson already shows an error toast on failure.
+        Http.postJson(APP_ROUTES.TAB_ORDER, { context, tabs }, {
+            errorMessage: 'Failed to save the tab order'
+        }).catch(() => {});
+    }
+
+    /**
+     * Keep the Attachments badge in step with the list. Uploads and deletes both
+     * re-render .attachment-list-container (attachmentsUpdate), so the row count
+     * in that container is the authoritative number — deleting a file drops the
+     * badge without a page reload.
+     */
+    function syncAttachmentsBadge(listContainer) {
+        if (!listContainer) return;
+
+        // Nothing rendered yet: the container is filled by its own
+        // hx-trigger="load" request, so keep the server-rendered count until
+        // the list (or its empty state) actually arrives.
+        if (!listContainer.querySelector('.attachment-list, .attachment-list-empty')) return;
+
+        const modal = listContainer.closest('.modal-container');
+        const tabs = modal && modal.querySelector('[data-modal-tabs]');
+        if (!tabs) return;
+
+        setBadge(tabs, 'attachments', listContainer.querySelectorAll('.attachment-item').length);
+    }
+
+    /**
+     * htmx:afterSwap — an attachment list was just (re-)rendered. Both
+     * detail.elt and detail.target are inspected: they are the same element
+     * for the list container itself, but a swap triggered elsewhere can still
+     * carry the container in its subtree.
+     * @param {CustomEvent} event
+     */
+    function handleAfterSwap(event) {
+        const detail = event.detail || {};
+
+        [detail.elt, detail.target].forEach(node => {
+            if (!node || !node.classList) return;
+
+            // Newly swapped dialogs carry a fresh tab bar.
+            enableTabDragging(node);
+
+            if (node.classList.contains('attachment-list-container')) {
+                syncAttachmentsBadge(node);
+                return;
+            }
+
+            if (node.querySelectorAll) {
+                node.querySelectorAll('.attachment-list-container').forEach(syncAttachmentsBadge);
+            }
+        });
+    }
+
+    /** Tab click handling (delegated — modal content is swapped dynamically). */
+    function handleClick(event) {
+        const tab = event.target.closest('.modal-tab');
+        if (tab && tab.closest('[data-modal-tabs]')) {
+            event.preventDefault();
+            activateTab(tab.closest('[data-modal-tabs]'), tab.dataset.tab);
+            return;
+        }
+
+        // Sidebar buttons ("Checklist" / "Attachments") switch to their tab.
+        const switchBtn = event.target.closest('[data-switch-tab]');
+        if (switchBtn) {
+            const modal = switchBtn.closest('.modal-container');
+            const tabs = modal && modal.querySelector('[data-modal-tabs]');
+            if (tabs) {
+                revealTab(tabs, switchBtn.dataset.switchTab);
+            }
+        }
+    }
+
+    /**
+     * Attachment uploads: file input change → POST via fetch with progress.
+     * The upload URL lives on the hidden file input (data-upload-url).
+     */
+    function handleFileSelected(event) {
+        const input = event.target.closest('.attachment-file-input');
+        if (!input || !input.files || input.files.length === 0) return;
+
+        const file = input.files[0];
+        const url = input.dataset.uploadUrl;
+        if (!url) return;
+
+        const pane = input.closest('.attachments-pane');
+        const progress = pane && pane.querySelector('.attachment-progress');
+        const progressBar = pane && pane.querySelector('.attachment-progress-bar');
+        const progressLabel = pane && pane.querySelector('.attachment-progress-label');
+        const uploadBtn = pane && pane.querySelector('.attachment-upload-btn');
+
+        // Client-side size check for immediate feedback. Uses the effective
+        // server ceiling (min of app limit and php.ini post_max_size) so an
+        // oversized file is rejected before the request is even sent.
+        const maxBytes = window.ATTACHMENT_SERVER_MAX_BYTES || window.ATTACHMENT_MAX_BYTES || 0;
+        if (maxBytes > 0 && file.size > maxBytes) {
+            Http.toastError(`File is too large — the server accepts at most ${Math.round(maxBytes / 1048576 * 10) / 10} MB.`);
+            input.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('attachment', file, file.name);
+        formData.append('csrf_token', Csrf.getToken());
+
+        if (uploadBtn) uploadBtn.disabled = true;
+        if (progress) progress.hidden = false;
+
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', url);
+        xhr.setRequestHeader('X-CSRF-Token', Csrf.getToken());
+        xhr.setRequestHeader('HX-Request', 'true');
+
+        xhr.upload.addEventListener('progress', (e) => {
+            if (e.lengthComputable && progressBar) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.setProperty('--progress', pct + '%');
+                if (progressLabel) progressLabel.textContent = `Uploading… ${pct}%`;
+            }
+        });
+
+        xhr.addEventListener('load', () => {
+            if (uploadBtn) uploadBtn.disabled = false;
+            if (progress) progress.hidden = true;
+            if (progressBar) progressBar.style.setProperty('--progress', '0%');
+            input.value = '';
+
+            // triggerResponse endpoints return JSON with HX-Trigger; fire manually
+            const triggerHeader = xhr.getResponseHeader('HX-Trigger');
+            if (triggerHeader) {
+                try {
+                    const triggers = JSON.parse(triggerHeader);
+                    Object.entries(triggers).forEach(([eventName, detail]) => {
+                        document.body.dispatchEvent(new CustomEvent(eventName, { detail }));
+                    });
+                } catch (parseError) {
+                    console.error('Invalid HX-Trigger header', parseError);
+                }
+            }
+
+            if (xhr.status !== 200) {
+                Http.toastError(`Upload failed (HTTP ${xhr.status})`);
+            }
+
+            maybeStorePendingToken(pane, xhr);
+
+            // The server-rendered badge count is only correct on first paint —
+            // keep it in step with the file that was just accepted.
+            if (xhr.status === 200) {
+                const modal = input.closest('.modal-container');
+                incrementBadge(modal && modal.querySelector('[data-modal-tabs]'), 'attachments');
+            }
+        });
+
+        xhr.addEventListener('error', () => {
+            if (uploadBtn) uploadBtn.disabled = false;
+            if (progress) progress.hidden = true;
+            input.value = '';
+            Http.toastError('Network error during upload');
+        });
+
+        xhr.send(formData);
+    }
+
+    /** "Add file…" button opens the hidden file input. */
+    function handleUploadButtonClick(event) {
+        const btn = event.target.closest('.attachment-upload-btn');
+        if (!btn) return;
+        const pane = btn.closest('.attachments-pane');
+        const input = pane && pane.querySelector('.attachment-file-input');
+        if (input) input.click();
+    }
+
+    /**
+     * After a pending upload (item not yet created, itemId = 0), append a
+     * hidden token field to the item-create form so the token is posted and
+     * claimed server-side when the item is saved.
+     */
+    function appendPendingToken(pane, token) {
+        if (!pane || !token) return;
+        const holder = pane.querySelector('.attachment-pending-tokens');
+        if (!holder) return;
+        if (holder.querySelector(`input[value="${token}"]`)) return; // dedupe
+
+        const field = document.createElement('input');
+        field.type = 'hidden';
+        field.name = 'pending_attachments[]';
+        field.value = token;
+        holder.appendChild(field);
+    }
+
+    /**
+     * Extract the pending token from an upload response. The server fires
+     * the attachmentsUpdate event with itemId 0 for pending uploads; the
+     * token itself rides in a custom header.
+     */
+    function maybeStorePendingToken(pane, xhr) {
+        if (!pane) return;
+        const itemId = pane.dataset.itemId;
+        if (itemId !== '0') return;
+        appendPendingToken(pane, xhr.getResponseHeader('X-Attachment-Token'));
+    }
+
+    /**
+     * Global drag-and-drop on the whole modal: dragging a file anywhere over
+     * the task dialog switches to the Attachments tab and shows an overlay;
+     * dropping starts the upload. preventDefault stops the browser from
+     * opening the file.
+     */
+    function initDragAndDrop() {
+        const dragDepth = new WeakMap(); // modal-container -> enter depth
+
+        document.body.addEventListener('dragover', (event) => {
+            const modal = event.target.closest && event.target.closest('.modal-container');
+            if (!modal || !modal.querySelector('.attachments-pane')) return;
+            event.preventDefault();
+            showOverlay(modal);
+        });
+
+        document.body.addEventListener('dragleave', (event) => {
+            const modal = event.target.closest && event.target.closest('.modal-container');
+            if (!modal) return;
+            // Only hide when the pointer actually left the modal
+            if (!modal.contains(event.relatedTarget)) hideOverlay(modal);
+        });
+
+        document.body.addEventListener('drop', (event) => {
+            const modal = event.target.closest && event.target.closest('.modal-container');
+            if (!modal) return;
+            hideOverlay(modal);
+            if (!modal.querySelector('.attachments-pane')) return;
+            event.preventDefault();
+
+            const files = event.dataTransfer && event.dataTransfer.files;
+            if (!files || files.length === 0) return;
+
+            // Switch to the Attachments tab, then feed the file through the input
+            const tabs = modal.querySelector('[data-modal-tabs]');
+            revealTab(tabs, 'attachments');
+
+            const input = modal.querySelector('.attachment-file-input');
+            if (input) {
+                // DataTransfer.files is assignable in modern browsers
+                try {
+                    input.files = files;
+                } catch (e) {
+                    // Fallback: dispatch upload directly with the file
+                    uploadFileDirect(input, files[0]);
+                    return;
+                }
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+            }
+        });
+    }
+
+    function showOverlay(modal) {
+        if (modal.querySelector('.modal-drop-overlay')) return;
+        const dialog = modal.querySelector('.dialog');
+        if (!dialog) return;
+        if (getComputedStyle(dialog).position === 'static') {
+            dialog.style.position = 'relative';
+        }
+        const overlay = document.createElement('div');
+        overlay.className = 'modal-drop-overlay';
+        overlay.textContent = 'Drop file to attach';
+        dialog.appendChild(overlay);
+    }
+
+    function hideOverlay(modal) {
+        const overlay = modal.querySelector('.modal-drop-overlay');
+        if (overlay) overlay.remove();
+    }
+
+    /** Direct upload fallback when input.files is not assignable. */
+    function uploadFileDirect(input, file) {
+        const fakeEvent = { target: input, files: [file] };
+        // Reuse the change handler by simulating a selection
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        input.files = dt.files;
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    function init() {
+        // Idempotent: guards against double-binding (e.g. if init is invoked
+        // from more than one bootstrap path), which would duplicate uploads.
+        if (ModalTabsManager._initialized) return;
+        ModalTabsManager._initialized = true;
+
+        document.body.addEventListener('click', handleClick);
+        document.body.addEventListener('change', (e) => {
+            if (e.target.closest && e.target.closest('.attachment-file-input')) {
+                handleFileSelected(e);
+            }
+        });
+        document.body.addEventListener('click', handleUploadButtonClick);
+        document.body.addEventListener('htmx:afterSwap', handleAfterSwap);
+        document.body.addEventListener('dragstart', handleDragStart);
+        document.body.addEventListener('dragover', handleDragOver);
+        document.body.addEventListener('drop', handleDrop);
+        document.body.addEventListener('dragend', handleDragEnd);
+        enableTabDragging(document.body);
+        initDragAndDrop();
+    }
+
+    return { init, activateTab, revealTab, setBadge, incrementBadge };
+})();
+
+// ModalTabsManager.init() is invoked from the main DOMContentLoaded bootstrap
+// below — no separate listener here, or every upload would fire twice.
+
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof ContextMenuManager !== 'undefined') {
         ContextMenuManager.init();
@@ -792,6 +1302,7 @@ document.addEventListener('DOMContentLoaded', () => {
     TinyMCEManager.init();
     TableSelectManager.init();
     TableFilterManager.init();
+    ModalTabsManager.init();
     
     // Process HTMX attributes on panel-modal triggers after HTMX is loaded
     if (typeof htmx !== 'undefined') {

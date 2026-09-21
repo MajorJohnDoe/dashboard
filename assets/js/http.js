@@ -17,6 +17,7 @@ const APP_ROUTES = Object.freeze({
     BOARD_SHARE: '/board/share',
     COLUMN_SAVE_ORDER: '/column/save-column-order',
     TASK_MOVE_TO_COLUMN: '/task/move-to-column',
+    TAB_ORDER: '/ui/tab-order',
     JOBS_BATCH: '/jobs/batch',
 });
 

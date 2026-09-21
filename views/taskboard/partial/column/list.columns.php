@@ -1,5 +1,6 @@
 <?php
 use Dashboard\Core\Sanitize;
+use Dashboard\Core\AttachmentService;
 use Dashboard\Taskboard\ColumnController;
 use Dashboard\Taskboard\TaskController;
 use Dashboard\Taskboard\TaskScheduleController;
@@ -12,6 +13,15 @@ try {
     unset($scheduleController);
 } catch (\Exception $e) {
     error_log("Schedule catch-up skipped: " . $e->getMessage());
+}
+
+// Opportunistic cleanup of abandoned staged attachment uploads (dialogs
+// cancelled, browser closed, etc.). Internally time-throttled to at most
+// one sweep per hour; silently skipped on failure.
+try {
+    (new AttachmentService($db))->sweepExpired(86400); // 24 h retention
+} catch (\Exception $e) {
+    error_log("Attachment sweep skipped: " . $e->getMessage());
 }
 
 // Assume we've already instantiated $db and $user objects
@@ -44,8 +54,16 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
 
     $taskController = new TaskController($db, $user);
     $tasksById = $taskController->loadTaskDataByIds($allTaskIds, $user->getUserId());
+
+    // Batch-load which tasks have attachments (one grouped query) for the
+    // 📎 card indicator — same idea as the recurring-task ↻ icon.
+    $attachmentService = new AttachmentService($db);
+    $taskIdsWithAttachments = $attachmentService->itemsWithAttachments(
+        (int)$user->getUserId(), $allTaskIds, 'task'
+    );
 } else {
     $tasksById = [];
+    $taskIdsWithAttachments = [];
 }
 
 if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
@@ -104,6 +122,13 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
                 $recurringIcon = !empty($task['schedule_id'])
                     ? ' <span class="tm-task-recurring-icon" title="Recurring task">&#8635;</span>'
                     : '';
+                // Attachment indicator: paperclip U+1F4CE followed by variation
+                // selector-15 (U+FE0E) to request monochrome text presentation
+                // instead of a color emoji — reads as a subtle glyph on the
+                // dark card, matching the ↻ recurring icon.
+                $attachmentIcon = in_array((int)$task['task_id'], $taskIdsWithAttachments, true)
+                    ? '<span class="tm-task-attachment-icon" title="Has attachments">&#128206;&#65038;</span>'
+                    : '';
 
                 echo '<li 
                         class="tm-task ' . $taskPriorityClass . ' open-modal-btn"
@@ -115,7 +140,7 @@ if ($columnsResult['success'] && !empty($columnsResult['columns'])) {
                 echo '<div class="flex-table">
                         <div class="flex-row">
                             <div class="flex-cell flex-cell-vcenter" style="padding: 0px;">
-                                <div class="title">' . Sanitize::e(html_entity_decode($task['task_title'])) . $recurringIcon . '</div>
+                                <div class="title">' . Sanitize::e(html_entity_decode($task['task_title'])) . $attachmentIcon . $recurringIcon . '</div>
                                 ' . (!empty($taskSelectedLabels) ? '<div class="labels">' . $taskLabels . '</div>' : '') . '
                             </div>
                             <div class="flex-cell flex-cell-shrink">

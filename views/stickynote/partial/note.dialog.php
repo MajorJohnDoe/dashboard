@@ -130,7 +130,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                         </div>
                     </div>
                     <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                        <button type="submit" form="form_stickynote" class="btn btn-blue">Upload file</button>
+                        <button type="button"
+                                class="btn btn-blue btn-with-icon"
+                                tabindex="-1"
+                                data-switch-tab="attachments"
+                                <?= ($action == 'edit' && $note_id) ? '' : 'disabled' ?>>
+                            <?= svgIcon('attachments') ?>Attachments
+                        </button>
                     </div>
                 </div>
                 <div class="flex-row">
@@ -138,13 +144,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                        
                     </div>
                 </div>
-                <div class="flex-row" style="flex: 1;">
+                <?php
+                // ---- Tab system: Content / Attachments ----
+                // Same pattern as the task modal. Attachments tab appears only
+                // in edit mode (a note must exist before files attach).
+                $noteAttachmentCount = ($action == 'edit' && $note_id)
+                    ? (new \Dashboard\Core\AttachmentService($db))->countForItem((int)$user->getUserId(), (int)$note_id, 'stickynote')
+                    : 0;
+                $noteHasAttachments = $noteAttachmentCount > 0;
+                ?>
+                <?php
+                // Tab order is drag-reorderable and stored per user (UiPreferenceService).
+                $tabOrder = (new \Dashboard\Core\UiPreferenceService($db))
+                    ->getTabOrder((int)$user->getUserId(), 'note', ['content', 'attachments']);
+                // Open on the first visible tab of the saved order.
+                $activeTab = \Dashboard\Core\UiPreferenceService::defaultTab($tabOrder, [
+                    'content' => true,
+                    'attachments' => $noteHasAttachments,
+                ]);
+                $tabButtons = [];
+
+                ob_start(); ?>
+                    <button type="button" class="modal-tab<?= $activeTab === 'content' ? ' active' : '' ?>" data-tab="content"><?= svgIcon('description', ['class' => 'modal-tab-icon']) ?>Content</button>
+                <?php $tabButtons['content'] = ob_get_clean();
+
+                ob_start(); ?>
+                    <button type="button" class="modal-tab<?= $activeTab === 'attachments' ? ' active' : '' ?>" data-tab="attachments" data-tab-conditional data-tab-hide-when-empty <?= $noteHasAttachments ? '' : 'hidden' ?>><?= svgIcon('attachments', ['class' => 'modal-tab-icon']) ?>Attachments<span class="modal-tab-badge" data-tab-badge="attachments" <?= $noteHasAttachments ? '' : 'hidden' ?>><?= $noteAttachmentCount ?></span></button>
+                <?php $tabButtons['attachments'] = ob_get_clean();
+                ?>
+                <div class="flex-row">
                     <div class="flex-cell">
-                        <textarea name="content" id="note_content" class="tinymce_editor" style="height: 300px;" placeholder="Note content"><?=Sanitize::e($note['content'] ?? '');?></textarea>
-                        <style>
-                            .tox-tinymce { height: 100% !important; }
-                        </style>
+                        <div class="modal-tabs note-modal-tabs" data-modal-tabs data-tab-order-context="note">
+                            <?php foreach ($tabOrder as $tabName): ?>
+                                <?= $tabButtons[$tabName] ?? '' ?>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
+                </div>
+
+                <div class="modal-tab-pane modal-tab-pane-flex<?= $activeTab === 'content' ? ' active' : '' ?>" data-tab-pane="content">
+                    <div class="flex-row" style="flex: 1;">
+                        <div class="flex-cell">
+                            <textarea name="content" id="note_content" class="tinymce_editor" style="height: 300px;" placeholder="Note content"><?=Sanitize::e($note['content'] ?? '');?></textarea>
+                            <style>
+                                .tox-tinymce { height: 100% !important; }
+                            </style>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-tab-pane<?= $activeTab === 'attachments' ? ' active' : '' ?>" data-tab-pane="attachments">
+                    <?php if ($action == 'edit' && $note_id): ?>
+                        <?php
+                        // Attachments section (edit mode only — a note must exist
+                        // before files can be attached to it).
+                        $attachmentItemType = 'stickynote';
+                        $attachmentItemId = (int)$note_id;
+                        $attachmentCount = $noteAttachmentCount;
+                        include BASE_DIR . '/views/core/partial/attachments.php';
+                        ?>
+                    <?php else: ?>
+                        <div class="attachment-list-empty">Save the note first, then you can attach files.</div>
+                    <?php endif; ?>
                 </div>
                 <div class="flex-row">
                     <div class="flex-cell flex-vertical-center flex-right">
@@ -166,12 +227,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE' && $action == 'edit' && $note_id) {
                     <div class="flex-cell">
                         <?php if ($action == 'edit'): ?>
                             <form id="form_deleteNote" hx-delete="<?=(isset($post_url) ? $post_url : '')?>" hx-target="body" hx-swap="beforeend">
-                                <button type="submit" class="btn btn-light-gray btn-hover-red" tabindex="-1">Delete note</button>
+                                <button type="submit" class="btn btn-light-gray btn-hover-red btn-with-icon" tabindex="-1"><?= svgIcon('delete') ?>Delete note</button>
                             </form>
                         <?php endif; ?>
                     </div>
                     <div class="flex-cell flex-vertical-center flex-right">
-                        <button type="submit" form="form_stickynote" class="btn btn-green"><?=Sanitize::e($submit_button_text);?></button>
+                        <button type="submit" form="form_stickynote" data-form-submit class="btn btn-green btn-with-icon"><?= svgIcon('save') ?><?=Sanitize::e($submit_button_text);?></button>
                     </div>
                 </div>
             </div>

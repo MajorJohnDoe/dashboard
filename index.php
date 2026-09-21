@@ -28,6 +28,7 @@ use Dashboard\Routes\NotificationRoutes;
 use Dashboard\Routes\TaskboardRoutes;
 use Dashboard\Routes\StickynoteRoutes;
 use Dashboard\Routes\JobRoutes;
+use Dashboard\Routes\AttachmentRoutes;
 
 $db = new Database($mysql_server, $mysql_user, $mysql_password, $mysql_database_name, _ERROR_REPORTING_MYSQL);
 $session = new SecureSession();
@@ -39,7 +40,9 @@ $authMiddleware = new AuthMiddleware($user);
 
 // Auth applies to every route by default; individual routes can opt out
 // (e.g. login) by simply not adding middleware.
-$router->setDefaultMiddleware([$authMiddleware]);
+// UploadSizeGuard runs first so an oversized POST body gets a clean 413
+// instead of a confusing CSRF/validation failure downstream.
+$router->setDefaultMiddleware([new \Dashboard\Core\UploadSizeGuard(), $authMiddleware]);
 
 // -------------------------------------------------------------------------
 // Route Registration
@@ -50,8 +53,9 @@ $registrarClasses = [
     CoreRoutes::class,          // full pages, login/logout, account settings
     NotificationRoutes::class,  // notification panel/list/actions
     TaskboardRoutes::class,     // boards, columns, tasks, labels, calendar, sharing
-    StickynoteRoutes::class,    // sticky notes, categories, audio transcribe, search
-    JobRoutes::class,           // job applications
+    StickynoteRoutes::class,   // sticky notes, categories, audio transcribe, search
+    JobRoutes::class,          // job applications
+    AttachmentRoutes::class,   // document attachments (tasks, notes, jobs)
 ];
 
 foreach ($registrarClasses as $registrarClass) {

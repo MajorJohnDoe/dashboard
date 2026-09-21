@@ -216,6 +216,9 @@ class JobApplication {
             // Remove embedded images (files + shared_item_images rows) before deleting the row
             $this->getImageService()->deleteAllForItem($userId, $id, 'job');
 
+            // Remove document attachments (files + item_attachments rows)
+            (new \Dashboard\Core\AttachmentService($this->db))->deleteAllForItem($userId, $id, 'job');
+
             $query = "DELETE FROM job_applications WHERE id = ? AND user_id = ?";
             $result = $this->db->q($query, "ii", $id, $userId);
 
@@ -249,6 +252,9 @@ class JobApplication {
         try {
             // Remove embedded images (files + shared_item_images rows) before deleting the rows
             $this->getImageService()->deleteAllForItems($userId, $cleanIds, 'job');
+
+            // Remove document attachments (files + item_attachments rows)
+            (new \Dashboard\Core\AttachmentService($this->db))->deleteAllForItems($userId, $cleanIds, 'job');
 
             $query = "DELETE FROM job_applications WHERE id IN ($placeholders) AND user_id = ?";
             $result = $this->db->q($query, $types, ...$params);

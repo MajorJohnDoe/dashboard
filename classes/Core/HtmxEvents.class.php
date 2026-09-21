@@ -67,6 +67,10 @@ final class HtmxEvents
     /** Close the recurring-schedule slide-out panel (panel.recurrence) */
     public const CLOSE_RECURRENCE_PANEL = 'closeRecurrencePanel';
 
+    /** Attachment list changed (payload: ['itemType' => string, 'itemId' => int]);
+     *  refresh the attachments tab/list for that item */
+    public const ATTACHMENTS_UPDATE = 'attachmentsUpdate';
+
     private function __construct()
     {
         // Static class - not instantiable

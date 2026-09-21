@@ -166,6 +166,12 @@ class Task {
             // reference-counted, so removing them from either task is safe.
             (new ItemImageService($this->db))->copyImageReferences($taskId, 'task', $newTaskId, 'task');
 
+            // Attachments are copied as independent files + rows: each task
+            // owns its own copies, so deleting one never breaks the other.
+            (new \Dashboard\Core\AttachmentService($this->db))->copyAttachments(
+                (int)$userId, (int)$taskId, 'task', (int)$newTaskId, 'task'
+            );
+
             $this->db->commit();
             return ['success' => true, 'message' => 'Task duplicated successfully', 'new_task_id' => $newTaskId];
         } catch (\Exception $e) {

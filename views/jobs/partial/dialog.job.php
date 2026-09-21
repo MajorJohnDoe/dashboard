@@ -147,14 +147,71 @@ $csrfToken = CsrfProtection::getToken();
                                     </div>
                                 </div>
 
+                                <?php
+                                // ---- Tab system: Description / Attachments ----
+                                // Same pattern as the task modal. Attachments tab
+                                // appears only in edit mode (the application must
+                                // exist before files can attach) or when files exist.
+                                $attachmentService = new \Dashboard\Core\AttachmentService($db);
+                                $jobAttachmentCount = $isEdit
+                                    ? $attachmentService->countForItem((int)$user->getUserId(), $jobId, 'job')
+                                    : 0;
+                                $jobHasAttachments = $jobAttachmentCount > 0;
+                                ?>
+                                <?php
+                                // Tab order is drag-reorderable and stored per user
+                                // (UiPreferenceService → user_ui_preference).
+                                $tabOrder = (new \Dashboard\Core\UiPreferenceService($db))
+                                    ->getTabOrder((int)$user->getUserId(), 'job', ['description', 'attachments']);
+                                // Open on the first visible tab of the saved order.
+                                $activeTab = \Dashboard\Core\UiPreferenceService::defaultTab($tabOrder, [
+                                    'description' => true,
+                                    'attachments' => $jobHasAttachments,
+                                ]);
+                                $tabButtons = [];
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $activeTab === 'description' ? ' active' : '' ?>" data-tab="description"><?= svgIcon('description', ['class' => 'modal-tab-icon']) ?>Description</button>
+                                <?php $tabButtons['description'] = ob_get_clean();
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $activeTab === 'attachments' ? ' active' : '' ?>" data-tab="attachments" data-tab-conditional data-tab-hide-when-empty <?= $jobHasAttachments ? '' : 'hidden' ?>><?= svgIcon('attachments', ['class' => 'modal-tab-icon']) ?>Attachments<span class="modal-tab-badge" data-tab-badge="attachments" <?= $jobHasAttachments ? '' : 'hidden' ?>><?= $jobAttachmentCount ?></span></button>
+                                <?php $tabButtons['attachments'] = ob_get_clean();
+                                ?>
                                 <div class="flex-row">
                                     <div class="flex-cell">
-                                        <label for="job_notes">Job description:</label>
-                                        <textarea name="notes" 
-                                                  id="job_notes" 
-                                                  class="tinymce_editor tinymce-hidden" 
-                                                  aria-hidden="true"><?= Sanitize::e($jobData['notes'] ?? '') ?></textarea>
+                                        <div class="modal-tabs job-modal-tabs" data-modal-tabs data-tab-order-context="job">
+                                            <?php foreach ($tabOrder as $tabName): ?>
+                                                <?= $tabButtons[$tabName] ?? '' ?>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
+                                </div>
+
+                                <div class="modal-tab-pane modal-tab-pane-flex<?= $activeTab === 'description' ? ' active' : '' ?>" data-tab-pane="description">
+                                    <div class="flex-row">
+                                        <div class="flex-cell">
+                                            <textarea name="notes" 
+                                                      id="job_notes" 
+                                                      class="tinymce_editor tinymce-hidden" 
+                                                      aria-hidden="true"><?= Sanitize::e($jobData['notes'] ?? '') ?></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal-tab-pane<?= $activeTab === 'attachments' ? ' active' : '' ?>" data-tab-pane="attachments">
+                                    <?php if ($isEdit): ?>
+                                        <?php
+                                        // Attachments section (edit mode only — the
+                                        // application must exist before files attach).
+                                        $attachmentItemType = 'job';
+                                        $attachmentItemId = $jobId;
+                                        $attachmentCount = $jobAttachmentCount;
+                                        include BASE_DIR . '/views/core/partial/attachments.php';
+                                        ?>
+                                    <?php else: ?>
+                                        <div class="attachment-list-empty">Save the application first, then you can attach files.</div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -264,6 +321,25 @@ $csrfToken = CsrfProtection::getToken();
                                                value="<?= Sanitize::e($jobData['deadline_date'] ?? '') ?>">
                                     </div>
                                 </div>
+
+                                <!-- Attachments Button: reveals the Attachments tab.
+                                     That tab retires itself while empty, so this is the
+                                     way back in (edit mode only — the application must
+                                     exist before files can attach). -->
+                                <?php if ($isEdit): ?>
+                                <div class="flex-row form-sidebar-section">
+                                    <div class="flex-cell">
+                                        <span class="form-label">Attachments</span>
+                                        <button type="button"
+                                                class="btn btn-dark-gray btn-block btn-with-icon"
+                                                tabindex="-1"
+                                                data-switch-tab="attachments">
+                                            <?= svgIcon('attachments') ?>Attachments
+                                        </button>
+                                    </div>
+                                </div>
+                                <?php endif; ?>
+
                             </div>
                         </div>
 
@@ -274,22 +350,22 @@ $csrfToken = CsrfProtection::getToken();
                                     <div class="flex-cell">
                                         <?php if ($isEdit): ?>
                                             <button type="button" 
-                                                    class="btn btn-light-gray btn-hover-red" 
+                                                    class="btn btn-light-gray btn-hover-red btn-with-icon" 
                                                     tabindex="-1"
                                                     hx-delete="/jobs/dialog/delete/<?= $jobId ?>"
                                                     hx-confirm="Are you sure you want to delete this job application?"
                                                     hx-headers='{"X-CSRF-Token": "<?= Sanitize::e($csrfToken) ?>"}'
                                                     hx-target="#dialog-job-form .formOuter"
                                                     hx-swap="beforeend">
-                                                Delete application
+                                                <?= svgIcon('delete') ?>Delete application
                                             </button>
                                         <?php endif; ?>
                                     </div>
                                     <div class="flex-cell flex-vertical-center flex-right" style="text-align: right; margin-left: auto;">
-                                        <input type="submit" 
-                                               value="<?= $isEdit ? 'Save application' : 'Add application' ?>" 
-                                               form="form_jobApp" 
-                                               class="btn btn-green">
+                                        <button type="submit" 
+                                                form="form_jobApp" 
+                                                data-form-submit
+                                                class="btn btn-green btn-with-icon"><?= svgIcon('save') ?><?= $isEdit ? 'Save application' : 'Add application' ?></button>
                                     </div>
                                 </div>
                             </div>

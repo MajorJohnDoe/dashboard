@@ -266,6 +266,12 @@ class TaskScheduleController
         // original task must not break spawned recurring tasks.
         (new ItemImageService($this->db))->copyImageReferences($taskId, 'task', $scheduleId, 'schedule');
 
+        // Attachments are copied to the schedule template as well, so every
+        // spawned occurrence gets its own independent copies.
+        (new \Dashboard\Core\AttachmentService($this->db))->copyAttachments(
+            (int)$this->user->getUserId(), $taskId, 'task', (int)$scheduleId, 'schedule'
+        );
+
         return [
             'success' => true,
             'message' => 'Task is now recurring',

@@ -157,6 +157,77 @@ function hue2rgb($p, $q, $t){
 }
 
 
+/**
+ * Inline an icon from assets/img/icon_<name>.svg as an <svg> element.
+ *
+ * The SVG files stay the single source of truth (they can also be used
+ * directly as <img src>), while inlining lets the icon inherit the
+ * surrounding text color through stroke="currentColor" - required for tabs
+ * and buttons that recolor themselves on hover/active.
+ *
+ * @param string $name       Icon name, without the "icon_" prefix / ".svg" suffix.
+ * @param array  $attributes Extra root attributes (class, width, height, ...).
+ *                           "class" is appended to the base "ui-icon" class.
+ * @return string            SVG markup, or '' when the icon does not exist.
+ */
+function svgIcon($name, array $attributes = array()) {
+    static $iconFiles = array();
+
+    // Whitelist the name so it can never escape the icon directory.
+    $name = preg_replace('/[^a-z0-9_-]/i', '', (string)$name);
+    if ($name === '') {
+        return '';
+    }
+
+    if (!array_key_exists($name, $iconFiles)) {
+        $path = BASE_DIR . '/assets/img/icon_' . $name . '.svg';
+        $iconFiles[$name] = is_readable($path) ? (string)file_get_contents($path) : null;
+    }
+
+    // Missing icon: render nothing rather than a broken image.
+    if ($iconFiles[$name] === null) {
+        return '';
+    }
+
+    // Split the file into its root attributes and its inner markup, so the
+    // icon keeps its own geometry defaults (viewBox, stroke-width, caps)
+    // while the caller can override presentation attributes.
+    if (!preg_match('/<svg\b([^>]*)>(.*)<\/svg>/s', $iconFiles[$name], $matches)) {
+        return '';
+    }
+
+    $rootAttributes = $matches[1];
+    $innerMarkup = $matches[2];
+
+    $classes = 'ui-icon';
+    if (!empty($attributes['class'])) {
+        $classes .= ' ' . $attributes['class'];
+    }
+    unset($attributes['class']);
+
+    // Caller attributes win: drop the root ones that are about to be replaced.
+    foreach (array_keys($attributes) as $attributeName) {
+        $rootAttributes = preg_replace(
+            '/\s' . preg_quote($attributeName, '/') . '="[^"]*"/i',
+            '',
+            $rootAttributes
+        );
+    }
+
+    // Decorative by default - every icon sits next to a text label.
+    $attributes += array('aria-hidden' => 'true', 'focusable' => 'false');
+    $attributes = array('class' => $classes) + $attributes;
+
+    $attributeString = '';
+    foreach ($attributes as $attributeName => $attributeValue) {
+        $attributeString .= ' ' . $attributeName . '="'
+            . \Dashboard\Core\Sanitize::e((string)$attributeValue) . '"';
+    }
+
+    return '<svg' . $rootAttributes . $attributeString . '>' . $innerMarkup . '</svg>';
+}
+
+
 function adjustHexColorBrightness($hex, $steps) {
     // Steps should be between -255 and 255. Negative = darker, positive = lighter
     $steps = max(-255, min(255, $steps));

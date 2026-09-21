@@ -6,6 +6,7 @@ use Dashboard\Core\Sanitize;
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\User;
 use Dashboard\Core\ItemImageService;
+use Dashboard\Core\AttachmentService;
 use Dashboard\Core\HtmxEvents;
 use Dashboard\Taskboard\ColumnController;
 
@@ -49,6 +50,19 @@ class TaskController {
                 if (!$updateResult) {
                     throw new \RuntimeException('Failed to update task description after image processing.');
                 }
+            }
+
+            // Claim staged pending attachments (uploaded from the new-task
+            // dialog before the task existed). Tokens arrive as an array of
+            // hidden fields; invalid/foreign tokens are skipped silently.
+            $pendingTokens = array_values(array_filter(
+                (array)($_POST['pending_attachments'] ?? []),
+                fn($t) => is_string($t) && preg_match('/^[a-f0-9]{32}$/', $t)
+            ));
+            if (!empty($pendingTokens)) {
+                (new AttachmentService($this->db))->claimPending(
+                    (int)$this->user->getUserId(), (int)$taskId, 'task', $pendingTokens
+                );
             }
             
             $this->db->commit();
@@ -114,6 +128,9 @@ class TaskController {
         try {
             // Delete the images associated with this task (files + DB rows)
             $this->getImageService()->deleteAllForItem($this->user->getUserId(), $taskId, 'task');
+
+            // Delete document attachments (files + item_attachments rows)
+            (new AttachmentService($this->db))->deleteAllForItem($this->user->getUserId(), (int)$taskId, 'task');
 
             $result = $this->taskModel->deleteTask($taskId);
             

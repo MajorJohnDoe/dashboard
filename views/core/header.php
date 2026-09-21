@@ -28,6 +28,16 @@ use Dashboard\Core\Sanitize;
         // Event names emitted by \Dashboard\Core\HtmxEvents (classes/Core/HtmxEvents.class.php).
         // Emitted server-side so PHP and JS can never drift apart.
         window.HTMX_EVENTS = Object.freeze(<?= json_encode(\Dashboard\Core\HtmxEvents::all(), JSON_FORCE_OBJECT) ?>);
+        // Client-side mirror of _UPLOAD_MAX_BYTES (config.php) for instant
+        // size validation before an upload request is even sent.
+        window.ATTACHMENT_MAX_BYTES = <?= (int)(_UPLOAD_MAX_BYTES ?? 10485760) ?>;
+        // Effective server limit: the smaller of the app limit and php.ini's
+        // post_max_size (PHP drops the whole body above post_max_size, so
+        // that is the real ceiling). 0 = unknown.
+        window.ATTACHMENT_SERVER_MAX_BYTES = <?= (int)(min(
+            (int)(_UPLOAD_MAX_BYTES ?? 10485760),
+            \Dashboard\Core\UploadSizeGuard::iniBytes('post_max_size')
+        )) ?>;
     </script>
 </head>
 

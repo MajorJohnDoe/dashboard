@@ -25,6 +25,10 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
             $taskIsResolved = $taskData['resolved_date'];
             $taskScheduleId = (int)($taskData['schedule_id'] ?? 0);
         }
+
+        // Attachment count for the tab badge (0 hides the Attachments tab)
+        $attachmentService = new \Dashboard\Core\AttachmentService($db);
+        $taskAttachmentCount = $attachmentService->countForItem((int)$user->getUserId(), (int)$_GET['task_id'], 'task');
     }
 
 
@@ -189,23 +193,115 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
+                                <?php
+                                // ---- Tab system: Description / Checklist / Attachments ----
+                                // Description is always visible. Checklist and Attachments
+                                // tabs appear only when content exists or the user initiates
+                                // adding one (sidebar buttons switch to the tab).
+                                // The task_desc textarea lives inside the Description pane
+                                // below (single instance — no duplicate id).
+                                $taskIdForTabs = isset($_GET['task_id']) ? (int)$_GET['task_id'] : 0;
+                                $hasChecklist = isset($taskChecklist) && $taskChecklist != null;
+                                // Badge counts: the checklist is stored as JSON, the
+                                // attachments as a count (+ staged pending files).
+                                $checklistItemCount = $hasChecklist ? count(json_decode($taskChecklist, true) ?: []) : 0;
+                                // New-task mode: show the Attachments tab when there are
+                                // staged pending files (modal re-opened mid-flow).
+                                $pendingCount = ($taskIdForTabs === 0)
+                                    ? count((new \Dashboard\Core\AttachmentService($db))->getPending((int)$user->getUserId(), 'task'))
+                                    : 0;
+                                $attachmentTabCount = (int)($taskAttachmentCount ?? 0) + $pendingCount;
+                                $hasAttachments = $attachmentTabCount > 0;
+                                ?>
+                                <?php
+                                // Tab order is drag-reorderable and stored per user
+                                // (UiPreferenceService → user_ui_preference). Each button
+                                // is buffered so its markup stays as-is while the order
+                                // comes from the saved preference.
+                                $tabOrder = (new \Dashboard\Core\UiPreferenceService($db))
+                                    ->getTabOrder((int)$user->getUserId(), 'task', ['description', 'checklist', 'attachments']);
+                                // The dialog opens on the first tab of the saved order that
+                                // is actually visible (conditional tabs can be hidden while
+                                // empty), so reordering also picks the opening tab.
+                                $activeTab = \Dashboard\Core\UiPreferenceService::defaultTab($tabOrder, [
+                                    'description' => true,
+                                    'checklist' => $hasChecklist,
+                                    'attachments' => $hasAttachments,
+                                ]);
+                                $tabButtons = [];
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $activeTab === 'description' ? ' active' : '' ?>" data-tab="description">
+                                        <?= svgIcon('description', ['class' => 'modal-tab-icon']) ?>Description
+                                    </button>
+                                <?php $tabButtons['description'] = ob_get_clean();
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $activeTab === 'checklist' ? ' active' : '' ?>" data-tab="checklist" data-tab-conditional data-tab-hide-when-empty <?= $hasChecklist ? '' : 'hidden' ?>>
+                                        <?= svgIcon('check', ['class' => 'modal-tab-icon']) ?>Checklist<span class="modal-tab-badge" data-tab-badge="checklist" <?= $hasChecklist ? '' : 'hidden' ?>><?= $checklistItemCount ?></span>
+                                    </button>
+                                <?php $tabButtons['checklist'] = ob_get_clean();
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $activeTab === 'attachments' ? ' active' : '' ?>" data-tab="attachments" data-tab-conditional data-tab-hide-when-empty <?= $hasAttachments ? '' : 'hidden' ?>>
+                                        <?= svgIcon('attachments', ['class' => 'modal-tab-icon']) ?>Attachments<span class="modal-tab-badge" data-tab-badge="attachments" <?= $hasAttachments ? '' : 'hidden' ?>><?= $attachmentTabCount ?></span>
+                                    </button>
+                                <?php $tabButtons['attachments'] = ob_get_clean();
+                                ?>
                                 <div class="flex-row">
                                     <div class="flex-cell">
-                                        <label for="task_desc">Task description:</label><br>
-                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?=(isset($taskDescription) ? Sanitize::e($taskDescription) : '')?></textarea>
+                                        <div class="modal-tabs task-modal-tabs" data-modal-tabs data-tab-order-context="task">
+                                            <?php foreach ($tabOrder as $tabName): ?>
+                                                <?= $tabButtons[$tabName] ?? '' ?>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex-row task_checklist"></div>
-                                <?php
-                                if (isset($taskChecklist) && $taskChecklist != null) {
-                                    echo '
+
+                                <div class="modal-tab-pane modal-tab-pane-flex<?= $activeTab === 'description' ? ' active' : '' ?>" data-tab-pane="description">
+                                    <div class="flex-row">
+                                        <div class="flex-cell">
+                                            <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?=(isset($taskDescription) ? Sanitize::e($taskDescription) : '')?></textarea>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal-tab-pane<?= $activeTab === 'checklist' ? ' active' : '' ?>" data-tab-pane="checklist">
+                                    <div class="flex-row task_checklist"></div>
+                                    <?php
+                                    if ($hasChecklist) {
+                                        echo '
                                         <div
-                                            hx-get="/task/checklist/edit/'.(isset($_GET['task_id']) ? $_GET['task_id'] : '').'" 
+                                            hx-get="/task/checklist/edit/'.($taskIdForTabs ?: '').'" 
                                             hx-trigger="load, taskChecklist from:body" 
                                             hx-target="this" hx-swap="innerHTML">
                                         </div>';
-                                }
-                                ?>
+                                    }
+                                    ?>
+                                </div>
+
+                                <div class="modal-tab-pane<?= $activeTab === 'attachments' ? ' active' : '' ?>" data-tab-pane="attachments">
+                                    <?php
+                                    // Attachments work in BOTH modes:
+                                    //  - edit mode (task exists): files persist immediately
+                                    //  - new mode (no task yet): files are staged as session
+                                    //    pending uploads; token hidden fields are posted with
+                                    //    the form and claimed into the DB on task creation.
+                                    //    Abandoned staged files are swept after 24 h.
+                                    $attachmentItemType = 'task';
+                                    $attachmentItemId = $taskIdForTabs; // 0 = new task → pending staging
+                                    $attachmentCount = $taskAttachmentCount ?? 0;
+                                    include BASE_DIR . '/views/core/partial/attachments.php';
+
+                                    if ($taskIdForTabs === 0) {
+                                        // Pre-existing pending files (e.g. modal re-opened mid-flow)
+                                        $pendingList = (new \Dashboard\Core\AttachmentService($db))->getPending((int)$user->getUserId(), 'task');
+                                        foreach (array_keys($pendingList) as $pendingToken) {
+                                            echo '<input type="hidden" name="pending_attachments[]" value="' . Sanitize::e($pendingToken) . '">';
+                                        }
+                                    }
+                                    ?>
+                                </div>
                             </div>
                         </div>
 
@@ -216,22 +312,38 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                     <div class="flex-cell">
                                         <span class="form-label">Add to task</span>
                                         <!-- Labels Button -->
-                                        <button class="btn btn-dark-gray btn-block" 
+                                        <button class="btn btn-dark-gray btn-block btn-with-icon" 
                                                 hx-get="/label/edit"
                                                 hx-target="body" 
                                                 hx-swap="beforeend"
                                                 tabindex="-1">
-                                            Edit labels
+                                            <?= svgIcon('tag') ?>Edit labels
                                         </button>
-                                        <!-- Checklist Button -->
+                                        <!-- Checklist Button: creates the checklist when the task
+                                             has none, otherwise it only reveals the existing tab
+                                             (no fetch — the pane already holds the editor, so a
+                                             fetch would duplicate #checklist-items). Disabled while
+                                             the checklist has items: the tab is always visible then. -->
                                         <button type="button" 
-                                                class="btn btn-dark-gray btn-block" 
+                                                class="btn btn-dark-gray btn-block btn-with-icon" 
+                                                tabindex="-1"
+                                                data-switch-tab="checklist"
+                                                <?php if (!$hasChecklist): ?>
                                                 hx-get="/task/checklist/new/0"
                                                 hx-target="#dialog-column-add-task .task_checklist" 
                                                 hx-swap="innerHTML" 
+                                                <?php endif; ?>
+                                                <?= ($hasChecklist && $checklistItemCount > 0) ? 'disabled' : '' ?>>
+                                            <?= svgIcon('check') ?>Checklist
+                                        </button>
+                                        <!-- Attachments Button: switches to the Attachments tab.
+                                             Works in new-task mode too — files are staged as
+                                             pending uploads and claimed when the task is saved. -->
+                                        <button type="button"
+                                                class="btn btn-dark-gray btn-block btn-with-icon"
                                                 tabindex="-1"
-                                                <?= isset($taskChecklist) && $taskChecklist != null ? 'disabled' : '' ?>>
-                                            Checklist
+                                                data-switch-tab="attachments">
+                                            <?= svgIcon('attachments') ?>Attachments
                                         </button>
                                     </div>
                                 </div>
@@ -271,7 +383,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                         <span class="form-label">Actions</span><br>
                                         <!-- Duplicate task Button -->
                                         <div style="position: relative;">
-                                            <button class="btn btn-dark-gray btn-block" 
+                                            <button class="btn btn-dark-gray btn-block btn-with-icon" 
                                                     id="duplicate-task-btn"
                                                     hx-get="/task/duplicate/dupe/<?=(isset($_GET['task_id']) ? $_GET['task_id'] : '')?>"
                                                     hx-target="#duplicate-task-box" 
@@ -280,7 +392,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                                     data-type="small-popup"
                                                     data-popup-wrapper="duplicate-task-box"
                                                     <?=(isset($_GET['action']) && $_GET['action'] == 'new'? 'disabled':'')?>>
-                                                    Duplicate
+                                                    <?= svgIcon('duplicate') ?>Duplicate
                                                 </button>
                                             <div class="small-popup-box-wrapper">
                                                 <div id="duplicate-task-box"><!-- content goes here --></div>
@@ -295,12 +407,12 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                              repeated opens. NOT .open-modal-btn, which ModalManager
                                              ignores inside forms. -->
                                         <?php if (isset($_GET['action']) && $_GET['action'] == 'edit'): ?>
-                                            <button class="btn btn-dark-gray btn-block"
+                                            <button class="btn btn-dark-gray btn-block btn-with-icon"
                                                     id="make-recurring-btn"
                                                     data-recurrence-url="/task/recurrence/panel/<?=(int)$_GET['task_id']?>"
                                                     type="button"
                                                     tabindex="-1">
-                                                <?= (!empty($taskScheduleId) ? 'Edit recurring schedule' : 'Make recurring') ?>
+                                                <?= svgIcon('schedule') ?><?= (!empty($taskScheduleId) ? 'Edit recurring schedule' : 'Make recurring') ?>
                                             </button>
                                         <?php endif; ?>
 
@@ -322,12 +434,12 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                         <?php if (isset($_GET['action']) && $_GET['action'] == 'edit'): ?>
                             <form id="form_deleteTask" hx-delete="<?=(isset($post_url) ? $post_url : '')?>" hx-target="body" hx-swap="beforeend">
                                 <input type="hidden" name="task_id" value="<?=(isset($_GET['task_id']) ? Sanitize::e($_GET['task_id']) : '')?>">
-                                <button type="submit" class="btn btn-light-gray btn-hover-red" tabindex="-1">Delete task</button>
+                                <button type="submit" class="btn btn-light-gray btn-hover-red btn-with-icon" tabindex="-1"><?= svgIcon('delete') ?>Delete task</button>
                             </form>
                         <?php endif; ?>
                         </div>
                         <div class="flex-cell flex-vertical-center flex-right">
-                            <input type="submit" value="<?=($_GET['action'] == 'edit' ? 'Save task' : 'Add task')?>" form="form_addTask" class="btn btn-green">
+                            <button type="submit" form="form_addTask" data-form-submit class="btn btn-green btn-with-icon"><?= svgIcon('save') ?><?=($_GET['action'] == 'edit' ? 'Save task' : 'Add task')?></button>
                         </div>
                     </div>
                 </div>
