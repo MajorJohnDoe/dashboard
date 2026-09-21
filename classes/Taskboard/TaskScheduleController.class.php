@@ -301,6 +301,15 @@ class TaskScheduleController
             'schedule'
         );
 
+        // Attachment copies are NOT reference-counted (each owner has its own
+        // file), so the template's rows + files must go with it — otherwise
+        // they become unreachable orphans.
+        (new \Dashboard\Core\AttachmentService($this->db))->deleteAllForItem(
+            (int)$schedule[0]['user_id'],
+            $scheduleId,
+            'schedule'
+        );
+
         return $this->schedules->deleteSchedule($scheduleId)
             ? ['success' => true, 'message' => 'Recurring task deleted successfully']
             : ['success' => false, 'message' => 'Failed to delete schedule.'];

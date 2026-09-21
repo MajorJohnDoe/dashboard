@@ -1,0 +1,30 @@
+# Deny ALL web access to in-flight (staged) uploads.
+#
+# Files land here between upload and item creation (see
+# AttachmentService::stageUpload()). At that point they belong to no item yet,
+# so there is no ownership to check — the only safe answer is "deny
+# everything". Once an item claims a file it is moved to user_upload/<uid>/...
+# and served exclusively through /attachment/download/:id, which re-verifies
+# ownership, MIME type and path containment.
+#
+# NOTE: this file is whitelisted in .gitignore on purpose — without it a fresh
+# deployment exposes staged files (att_<random>.<ext>) over plain HTTP.
+
+# Belt and braces: mod_authz_core needs AllowOverride AuthConfig, mod_rewrite
+# needs AllowOverride FileInfo. Whichever the host permits will deny the
+# directory; on a host that permits neither, .htaccess is ignored entirely and
+# only "keep this directory outside the document root" helps.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^ - [F,L]
+</IfModule>
+
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+
+# Apache 2.2 fallback
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>

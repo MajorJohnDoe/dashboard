@@ -1,0 +1,12 @@
+# Block direct web access to document attachments under user_upload/.
+# Documents (PDF, txt, docx, xlsx) must be downloaded through the
+# authenticated /attachment/download/:id route, which verifies ownership
+# and sends nosniff/CSP headers. Images keep static serving.
+#
+# NOTE: this file is whitelisted in .gitignore on purpose — without it a fresh
+# deployment serves uploaded documents statically. Staged (not yet claimed)
+# uploads are additionally denied wholesale by user_upload_temp/.htaccess.
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule \.(pdf|txt|docx|xlsx)$ - [F,L]
+</IfModule>

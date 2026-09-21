@@ -1,6 +1,7 @@
 <?php
 use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
+use Dashboard\Core\AttachmentService;
 use Dashboard\Taskboard\TaskScheduleController;
 use Dashboard\Taskboard\TaskSchedule;
 use Dashboard\Taskboard\ColumnController;
@@ -167,7 +168,8 @@ $idPrefix = 'schedule';
                                 </div>
                                 <div class="flex-row">
                                     <div class="flex-cell flex-cell-shrink flex-vertical-center" style="position: relative;">
-                                        <div style="position: relative;">
+                                        <div class="label-search-field">
+                                            <?= svgIcon('tag', ['class' => 'label-search-icon']) ?>
                                             <input
                                                 class="label-search-input"
                                                 autocomplete="off"
@@ -193,39 +195,108 @@ $idPrefix = 'schedule';
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
+                                <?php
+                                // ---- Tab system: Description / Checklist / Attachments ----
+                                // Same tab bar as the task dialog (identical markup and badges),
+                                // with two deliberate differences:
+                                //  1. Every tab stays visible. The task dialog hides its empty
+                                //     conditional tabs because its sidebar has "switch to tab"
+                                //     buttons to bring them back; this dialog's sidebar holds the
+                                //     recurrence rule instead, so a hidden tab would be unreachable.
+                                //  2. The saved drag order applies to EDIT mode only — a new
+                                //     schedule always renders the default order below and its tab
+                                //     bar carries no order context, so it can neither inherit nor
+                                //     silently overwrite the layout the user set while editing.
+                                // Attachments on a template are copied to every task the schedule
+                                // spawns (TaskSchedule::spawnTaskFromSchedule), which is the point
+                                // of attaching them to a recurring task.
+                                $scheduleDefaultTabs = ['description', 'checklist', 'attachments'];
+                                $scheduleTabOrder = ($action === 'edit')
+                                    ? (new \Dashboard\Core\UiPreferenceService($db))
+                                        ->getTabOrder((int)$user->getUserId(), 'schedule', $scheduleDefaultTabs)
+                                    : $scheduleDefaultTabs;
+                                // Attachments need a persisted schedule to belong to.
+                                $scheduleChecklistCount = count($checklistItems);
+                                $scheduleAttachmentCount = ($action === 'edit' && $scheduleId > 0)
+                                    ? (new AttachmentService($db))->countForItem((int)$user->getUserId(), $scheduleId, 'schedule')
+                                    : 0;
+
+                                // Opening tab = the first tab of the saved order that actually
+                                // holds something. Every tab stays rendered (the bar always shows
+                                // the user's order), but the dialog must never open on an empty
+                                // placeholder: a brand-new schedule has no checklist items and
+                                // nothing to attach to yet, so it starts on Description even when
+                                // Checklist/Attachments are ordered first.
+                                $scheduleActiveTab = \Dashboard\Core\UiPreferenceService::defaultTab($scheduleTabOrder, [
+                                    'description' => true,
+                                    'checklist'   => $scheduleChecklistCount > 0,
+                                    'attachments' => $scheduleAttachmentCount > 0,
+                                ]);
+                                $scheduleTabButtons = [];
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $scheduleActiveTab === 'description' ? ' active' : '' ?>" data-tab="description">
+                                        <?= svgIcon('description', ['class' => 'modal-tab-icon']) ?>Description
+                                    </button>
+                                <?php $scheduleTabButtons['description'] = ob_get_clean();
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $scheduleActiveTab === 'checklist' ? ' active' : '' ?>" data-tab="checklist">
+                                        <?= svgIcon('check', ['class' => 'modal-tab-icon']) ?>Checklist<span class="modal-tab-badge" data-tab-badge="checklist"><?= $scheduleChecklistCount ?></span>
+                                    </button>
+                                <?php $scheduleTabButtons['checklist'] = ob_get_clean();
+
+                                ob_start(); ?>
+                                    <button type="button" class="modal-tab<?= $scheduleActiveTab === 'attachments' ? ' active' : '' ?>" data-tab="attachments">
+                                        <?= svgIcon('attachments', ['class' => 'modal-tab-icon']) ?>Attachments<span class="modal-tab-badge" data-tab-badge="attachments"><?= $scheduleAttachmentCount ?></span>
+                                    </button>
+                                <?php $scheduleTabButtons['attachments'] = ob_get_clean();
+                                ?>
                                 <div class="flex-row">
                                     <div class="flex-cell">
-                                        <label for="task_desc">Task description:</label>
-                                        <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?= Sanitize::e($description) ?></textarea>
+                                        <div class="modal-tabs schedule-modal-tabs" data-modal-tabs<?= $action === 'edit' ? ' data-tab-order-context="schedule"' : '' ?>>
+                                            <?php foreach ($scheduleTabOrder as $tabName): ?>
+                                                <?= $scheduleTabButtons[$tabName] ?? '' ?>
+                                            <?php endforeach; ?>
+                                        </div>
                                     </div>
                                 </div>
-                                <div class="flex-row">
-                                    <div class="flex-cell schedule-checklist">
-                                        <div class="schedule-checklist-header">
-                                            <label>Checklist:</label>
-                                            <button type="button" id="add-item" class="btn btn-dark-gray schedule-checklist-add" tabindex="-1">+ Add item</button>
-                                        </div>
-                                        <div id="checklist-container">
-                                            <div class="flex-table task-checklist-container" id="checklist-items">
-                                                <?php foreach ($checklistItems as $index => $item): ?>
-                                                    <div class="flex-row">
-                                                        <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                                                            <input type="checkbox" name="checklist[<?= (int)$index ?>][status]" tabindex="-1" value="complete" <?= (($item['status'] ?? '') === 'complete' ? 'checked' : '') ?>/>
-                                                        </div>
-                                                        <div class="flex-cell flex-cell-vcenter">
-                                                            <input type="text" name="checklist[<?= (int)$index ?>][description]" value="<?= Sanitize::e($item['description'] ?? '') ?>"/>
-                                                        </div>
-                                                        <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                                                            <button type="button" tabindex="-1" class="remove-item btn btn-dark-gray btn-hover-red schedule-checklist-remove" title="Remove item">X</button>
-                                                        </div>
-                                                    </div>
-                                                <?php endforeach; ?>
-                                                <?php if (empty($checklistItems)): ?>
-                                                    <div class="schedule-checklist-empty">No checklist items — spawned tasks won't include one.</div>
-                                                <?php endif; ?>
-                                            </div>
+
+                                <div class="modal-tab-pane modal-tab-pane-flex<?= $scheduleActiveTab === 'description' ? ' active' : '' ?>" data-tab-pane="description">
+                                    <div class="flex-row">
+                                        <div class="flex-cell">
+                                            <textarea name="task_desc" id="task_desc" class="tinymce_editor tinymce-hidden" aria-hidden="true"><?= Sanitize::e($description) ?></textarea>
                                         </div>
                                     </div>
+                                </div>
+
+                                <div class="modal-tab-pane<?= $scheduleActiveTab === 'checklist' ? ' active' : '' ?>" data-tab-pane="checklist">
+                                    <div class="flex-row">
+                                        <?php
+                                        // Unified checklist UI: the same partial the task edit
+                                        // dialog renders (views/core/partial/checklist.php). Only
+                                        // the empty-state text differs — a template with no items
+                                        // is a meaningful state here ("spawned tasks won't
+                                        // include one"), while the task dialog has no placeholder.
+                                        $checklistEmptyText = "No checklist items — spawned tasks won't include one.";
+                                        include BASE_DIR . '/views/core/partial/checklist.php';
+                                        ?>
+                                    </div>
+                                </div>
+
+                                <div class="modal-tab-pane<?= $scheduleActiveTab === 'attachments' ? ' active' : '' ?>" data-tab-pane="attachments">
+                                    <?php if ($action === 'edit' && $scheduleId > 0): ?>
+                                        <?php
+                                        // Edit mode only: a schedule must exist before files can
+                                        // be attached to it (same rule as the note/job dialogs).
+                                        $attachmentItemType = 'schedule';
+                                        $attachmentItemId = $scheduleId;
+                                        $attachmentCount = $scheduleAttachmentCount;
+                                        include BASE_DIR . '/views/core/partial/attachments.php';
+                                        ?>
+                                    <?php else: ?>
+                                        <div class="attachment-list-empty">Create the schedule first, then you can attach files.</div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>

@@ -4,7 +4,9 @@ namespace Dashboard\Core;
 use Dashboard\Core\Interfaces\DatabaseInterface;
 use Dashboard\Core\User;
 use Dashboard\Core\HtmxEvents;
+use Dashboard\Taskboard\Board;
 use Dashboard\Taskboard\Task;
+use Dashboard\Taskboard\TaskSchedule;
 use Dashboard\Stickynote\StickyNote;
 use Dashboard\Jobs\JobApplication;
 
@@ -28,6 +30,7 @@ class AttachmentController {
     /** item_type => validator fn($userId, $itemId): bool */
     private const ITEM_VALIDATORS = [
         'task'       => 'validateTaskAccess',
+        'schedule'   => 'validateScheduleAccess',
         'stickynote' => 'validateNoteAccess',
         'job'        => 'validateJobAccess',
     ];
@@ -99,6 +102,15 @@ class AttachmentController {
         }
 
         // Item does not exist yet: stage as a pending session upload.
+        // Only tasks have a create flow that can claim the tokens
+        // (TaskController::handleCreateTask). The sticky-note and job dialogs
+        // expose attachments in edit mode only, so staging for them would just
+        // park a file that nothing can ever claim.
+        if ($itemType !== 'task') {
+            triggerResponse(HtmxEvents::errorResponse('Save this item before attaching files.'));
+            return '';
+        }
+
         $file = $_FILES['attachment'] ?? null;
         if (!is_array($file)) {
             triggerResponse(HtmxEvents::errorResponse('No file was uploaded.'));
@@ -126,16 +138,28 @@ class AttachmentController {
      * DELETE /attachment/pending/:token
      * Removes a staged-but-not-yet-claimed file (user removed it from the
      * attachments list of a not-yet-created item).
+     *
+     * Fails (with a toast) when the token is unknown or belongs to another
+     * user, instead of reporting a success that did not happen.
      */
     public function handleDeletePending(): string {
         $token = (string)($_GET['token'] ?? '');
+        $itemType = (string)($_GET['item_type'] ?? '');
         $userId = (int)$this->user->getUserId();
 
         $service = new AttachmentService($this->db);
-        $service->discardPending($userId, $token);
+        if (!$service->discardPending($userId, $token)) {
+            triggerResponse(HtmxEvents::errorResponse('That staged file is no longer available.'));
+            return '';
+        }
+
+        // Fall back to a valid type so the refresh event still targets a pane.
+        if (!$this->isValidItemType($itemType)) {
+            $itemType = 'task';
+        }
 
         triggerResponse(HtmxEvents::successResponse('Attachment removed.', [
-            HtmxEvents::ATTACHMENTS_UPDATE => ['itemType' => (string)($_GET['item_type'] ?? ''), 'itemId' => 0],
+            HtmxEvents::ATTACHMENTS_UPDATE => ['itemType' => $itemType, 'itemId' => 0],
         ]));
         return '';
     }
@@ -157,13 +181,13 @@ class AttachmentController {
         } elseif ($itemId === 0) {
             // Not-yet-created item: list session-staged pending files.
             $service = new AttachmentService($this->db);
-            $html = $this->renderPendingList($service->getPending($userId, $itemType), $itemType);
+            $html = $this->renderList($service->getPending($userId, $itemType), $itemType, true);
         } elseif (!$this->validateItemAccess($itemType, $userId, $itemId)) {
             $html = '<div class="attachment-list-empty">You do not have access to this item.</div>';
         } else {
             $service = new AttachmentService($this->db);
             $attachments = $service->getForItem($userId, $itemId, $itemType);
-            $html = $this->renderList($attachments, $itemType, $itemId);
+            $html = $this->renderList($attachments, $itemType, false);
         }
 
         if (ob_get_length()) {
@@ -251,6 +275,23 @@ class AttachmentController {
         return $task->validateTaskOwnership($userId, $itemId);
     }
 
+    /**
+     * Recurring schedule template: the schedule must exist and its board must be
+     * writable by the user (owner or accepted write share) — the same gate the
+     * schedule's own controller uses before editing it.
+     *
+     * Attachments on a template are inherited by every task it spawns
+     * (TaskSchedule::spawnTaskFromSchedule copies them), so this is a write.
+     */
+    private function validateScheduleAccess(int $userId, int $itemId): bool {
+        $schedule = (new TaskSchedule($this->db))->getScheduleById($itemId);
+        if (empty($schedule)) {
+            return false;
+        }
+
+        return (new Board($this->db))->validateBoardWriteAccess($userId, (int)$schedule[0]['board_id']);
+    }
+
     /** Sticky note: must belong to the user. */
     private function validateNoteAccess(int $userId, int $itemId): bool {
         $note = new StickyNote($this->db);
@@ -264,60 +305,54 @@ class AttachmentController {
     }
 
     /**
-     * Render the attachment list partial. Kept here (rather than a view
-     * file) so the same markup is returned by both handleList and the
-     * upload/delete flows.
+     * Render the attachment list markup — one implementation for both real and
+     * pending (staged) rows.
+     *
+     * Pending rows are keyed by session token, cannot be downloaded (they are
+     * not owned by any item yet) and are deleted via /attachment/pending/:token;
+     * real rows are keyed by attachment id and link to the download route.
+     *
+     * @param array  $rows     Rows from getForItem(), or pending entries keyed by token.
+     * @param string $itemType Item type, used in the pending delete URL.
+     * @param bool   $pending  True when $rows are staged, not-yet-claimed files.
      */
-    /**
-     * Render the pending (staged, not-yet-claimed) attachment list. Same
-     * markup as renderList(), but rows are keyed by token and delete goes
-     * to /attachment/pending/:token. Pending files cannot be downloaded —
-     * they are not yet owned by any item.
-     */
-    private function renderPendingList(array $pending, string $itemType): string {
-        if (empty($pending)) {
+    private function renderList(array $rows, string $itemType, bool $pending): string {
+        if (empty($rows)) {
             return '<div class="attachment-list-empty">No attachments yet. Drop a file here or use the button above.</div>';
         }
 
         $html = '<ul class="attachment-list">';
-        foreach ($pending as $token => $entry) {
-            $safeToken = htmlspecialchars((string)$token, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-            $name = Sanitize::e($entry['original_filename'] ?? '');
-            $size = $this->formatSize((int)($entry['file_size'] ?? 0));
+        foreach ($rows as $key => $row) {
+            $icon = Sanitize::e($this->fileIcon((string)($row['mime_type'] ?? '')));
+            $name = Sanitize::e($row['original_filename'] ?? '');
+            $size = Sanitize::e(AttachmentService::formatBytes((int)($row['file_size'] ?? 0), 1));
 
-            $html .= '<li class="attachment-item" data-pending-token="' . $safeToken . '">'
-                . '<span class="attachment-icon" aria-hidden="true">' . Sanitize::e($this->fileIcon((string)($entry['mime_type'] ?? ''))) . '</span>'
-                . '<span class="attachment-details">'
-                . '<span class="attachment-name">' . $name . '</span>'
-                . '<span class="attachment-meta">' . Sanitize::e($size) . ' &middot; pending</span>'
-                . '</span>'
-                . '<button type="button" class="btn btn-light-gray btn-hover-red attachment-delete-btn" tabindex="-1"'
-                . ' hx-delete="/attachment/pending/' . $safeToken . '?item_type=' . Sanitize::e($itemType) . '"'
-                . ' hx-swap="none">X</button>'
-                . '</li>';
-        }
-        $html .= '</ul>';
+            if ($pending) {
+                // Token is server-generated hex; escaped anyway (Sanitize::e
+                // is the project-wide rule for anything echoed into HTML).
+                $token = Sanitize::e((string)$key);
 
-        return $html;
-    }
+                $html .= '<li class="attachment-item" data-pending-token="' . $token . '">'
+                    . '<span class="attachment-icon" aria-hidden="true">' . $icon . '</span>'
+                    . '<span class="attachment-details">'
+                    . '<span class="attachment-name">' . $name . '</span>'
+                    . '<span class="attachment-meta">' . $size . ' &middot; pending</span>'
+                    . '</span>'
+                    . '<button type="button" class="btn btn-light-gray btn-hover-red attachment-delete-btn" tabindex="-1"'
+                    . ' hx-delete="/attachment/pending/' . $token . '?item_type=' . Sanitize::e($itemType) . '"'
+                    . ' hx-swap="none">X</button>'
+                    . '</li>';
+                continue;
+            }
 
-    private function renderList(array $attachments, string $itemType, int $itemId): string {
-        if (empty($attachments)) {
-            return '<div class="attachment-list-empty">No attachments yet. Drop a file here or use the button above.</div>';
-        }
-
-        $html = '<ul class="attachment-list">';
-        foreach ($attachments as $attachment) {
-            $id = (int)$attachment['id'];
-            $name = Sanitize::e($attachment['original_filename']);
-            $size = $this->formatSize((int)$attachment['file_size']);
-            $date = date('M j, Y', strtotime((string)$attachment['created_at']));
+            $id = (int)($row['id'] ?? 0);
+            $date = Sanitize::e(date('M j, Y', strtotime((string)($row['created_at'] ?? ''))));
 
             $html .= '<li class="attachment-item" data-attachment-id="' . $id . '">'
-                . '<span class="attachment-icon" aria-hidden="true">' . Sanitize::e($this->fileIcon($attachment['mime_type'])) . '</span>'
+                . '<span class="attachment-icon" aria-hidden="true">' . $icon . '</span>'
                 . '<span class="attachment-details">'
                 . '<a class="attachment-name" href="/attachment/download/' . $id . '" download>' . $name . '</a>'
-                . '<span class="attachment-meta">' . Sanitize::e($size) . ' &middot; ' . Sanitize::e($date) . '</span>'
+                . '<span class="attachment-meta">' . $size . ' &middot; ' . $date . '</span>'
                 . '</span>'
                 . '<button type="button" class="btn btn-light-gray btn-hover-red attachment-delete-btn" tabindex="-1"'
                 . ' hx-delete="/attachment/delete/' . $id . '"'
@@ -339,15 +374,5 @@ class AttachmentController {
             'text/plain' => '📃',
             default => '📎',
         };
-    }
-
-    private function formatSize(int $bytes): string {
-        if ($bytes >= 1048576) {
-            return round($bytes / 1048576, 1) . ' MB';
-        }
-        if ($bytes >= 1024) {
-            return round($bytes / 1024) . ' KB';
-        }
-        return $bytes . ' B';
     }
 }

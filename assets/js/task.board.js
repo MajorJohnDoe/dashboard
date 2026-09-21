@@ -235,6 +235,11 @@ const ChecklistManager = (() => {
 
     /**
      * Creates a new checklist item element
+     *
+     * Must stay markup-identical to views/core/partial/checklist.php so rows
+     * added here look the same as server-rendered ones in both dialogs
+     * (task edit + recurring schedule).
+     *
      * @param {number} index - Row index used to pair the status/description
      *                        inputs (checklist[N][status], checklist[N][description]).
      * @return {HTMLElement} New checklist item element
@@ -244,44 +249,49 @@ const ChecklistManager = (() => {
         newItem.classList.add('flex-row');
         newItem.innerHTML = `
             <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                <input type="checkbox" tabindex="-1" name="checklist[${index}][status]" value="complete" />
+                <input type="checkbox" name="checklist[${index}][status]" value="complete" />
             </div>
             <div class="flex-cell flex-cell-vcenter">
                 <input type="text" name="checklist[${index}][description]" value="" />
             </div>
             <div class="flex-cell flex-cell-shrink flex-cell-vcenter">
-                <button type="button" tabindex="-1" class="remove-item btn btn-dark-gray btn-hover-red remove-item schedule-checklist-remove">X</button>
+                <button type="button" tabindex="-1" class="remove-item btn btn-dark-gray btn-hover-red" title="Remove item">X</button>
             </div>
         `;
         return newItem;
     }
 
     /**
-     * Shows/hides the schedule checklist "no items" placeholder depending on
-     * whether the container has rows. The placeholder is only (re-)injected
-     * in the schedule dialog (scoped by .schedule-checklist) — the task
-     * dialog has no equivalent empty state.
+     * Shows/hides the checklist empty-state placeholder depending on whether
+     * the container has rows. The text comes from the server via
+     * data-empty-text (only the schedule template sets one — the task dialog
+     * has no placeholder), and is inserted with textContent so it can never be
+     * interpreted as markup.
      * @param {HTMLElement} container - The #checklist-items container
      */
     function syncChecklistEmptyState(container) {
-        const empty = container.querySelector('.schedule-checklist-empty');
+        const empty = container.querySelector('.checklist-empty');
         const hasRows = container.querySelector('.flex-row') !== null;
+
         if (hasRows) {
             if (empty) empty.remove();
             return;
         }
-        if (!empty && container.closest('.schedule-checklist')) {
-            container.insertAdjacentHTML(
-                'beforeend',
-                '<div class="schedule-checklist-empty">No checklist items — spawned tasks won\'t include one.</div>'
-            );
+
+        const text = container.dataset.emptyText;
+        if (!empty && text) {
+            const placeholder = document.createElement('div');
+            placeholder.className = 'checklist-empty';
+            placeholder.textContent = text;
+            container.appendChild(placeholder);
         }
     }
 
     /**
-     * Mirrors the row count into the Checklist tab badge. Only the task edit
-     * dialog has a tab bar - the schedule dialog's checklist has no tabs, so
-     * the lookup finds nothing and the function returns quietly.
+     * Mirrors the row count into the Checklist tab badge of the dialog the
+     * container belongs to. Both dialogs that can hold a checklist (task edit,
+     * recurring-schedule edit) have a tab bar, and the lookup is scoped to the
+     * container's own modal, so a second dialog in the DOM is never touched.
      * @param {HTMLElement} container - The #checklist-items container
      */
     function syncChecklistTabBadge(container) {

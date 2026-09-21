@@ -15,6 +15,7 @@ final class UiPreferenceService
     /** Dialog contexts that expose a reorderable tab bar. */
     private const TAB_ORDER_TABS = [
         'task' => ['description', 'checklist', 'attachments'],
+        'schedule' => ['description', 'checklist', 'attachments'],
         'note' => ['content', 'attachments'],
         'job' => ['description', 'attachments'],
     ];
@@ -40,7 +41,7 @@ final class UiPreferenceService
      * every tab of the context exactly once.
      *
      * @param int      $userId
-     * @param string   $context  'task' | 'note' | 'job'
+     * @param string   $context  'task' | 'schedule' | 'note' | 'job'
      * @param string[] $defaults Fallback order
      * @return string[]
      */

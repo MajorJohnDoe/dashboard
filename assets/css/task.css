@@ -214,13 +214,58 @@
     box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
 }
 
-#form_addTask #search-label {
-    width: 13rem; 
-    background-image: url(/assets/img/icon_label.png); 
-    background-repeat: no-repeat; 
-    background-size: 1.3rem; 
-    padding-left: 2rem; 
-    background-position: 0.3rem 0.5rem;
+/* Row remove button: compact size, declared here rather than inline on the
+   markup so JS-rendered rows match the server-rendered ones. */
+.task-checklist-container .remove-item {
+    padding: 0.2rem 0.6rem;
+}
+
+/* "Add item" sits under the list, right-aligned — shared by the task edit and
+   recurring-schedule dialogs (views/core/partial/checklist.php). */
+.checklist-add-item {
+    float: right;
+    margin: 0.4rem 0 0 0;
+}
+
+/* Empty-state placeholder inside #checklist-items. Only the schedule template
+   sets data-empty-text; ChecklistManager re-injects it after add/remove. */
+.checklist-empty {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.85em;
+    color: #8a93a0;
+    font-style: italic;
+}
+
+/* Label search field: inline SVG icon + input, shared by every dialog that
+   uses .label-search-input (task edit + recurring-schedule edit). The icon is
+   icon_tag.svg inlined by svgIcon(), so it inherits the app icon color through
+   stroke="currentColor" — the old PNG background was task-form scoped. */
+.label-search-field {
+    position: relative;
+}
+
+.label-search-field .label-search-icon {
+    position: absolute;
+    left: 0.55rem;
+    top: 50%;
+    width: 1.1rem;
+    height: 1.1rem;
+    transform: translateY(-50%);
+    color: var(--font-color);
+    pointer-events: none;
+}
+
+/* The selector is deliberately specific: layout.css has
+   `.nice-form-group input[type=search]` (specificity 0,2,1) setting
+   `padding: 0.5rem` and `width: 100%`, which out-specifies a bare
+   .label-search-input — the placeholder text would then collide with the icon.
+   Both dialogs render the field inside .nice-form-group.
+   Width: the icon costs 2.2rem of the box, and the placeholder
+   ("Search for label") is 16 monospace chars ≈ 9.6rem in Fira Code plus the
+   right padding/border — 13rem clipped the last character, so this is 15rem. */
+.nice-form-group input[type="search"].label-search-input {
+    width: 15rem;
+    padding-left: 2.2rem;
 }
 
 #form_addTask #search-label-result-wrap {
@@ -967,51 +1012,10 @@
     flex: 0 0 auto;
 }
 
-/* ==========================================================================
-   Schedule edit dialog: checklist template section
-   Header row (label + compact add-button) above a boxed, zebra-striped
-   item list — visually separated from the TinyMCE description editor.
-   ========================================================================== */
-.schedule-checklist {
-    margin-top: 1rem;
-}
-
-.schedule-checklist-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    margin-bottom: 0.35rem;
-}
-
-.schedule-checklist-header label {
-    margin: 0;
-    font-weight: bold;
-}
-
-.schedule-checklist-add {
-    padding: 0.25rem 0.7rem;
-    font-size: 0.85em;
-    line-height: 1.2;
-}
-
-.schedule-checklist-remove {
-    padding: 0.15rem 0.5rem;
-    font-size: 0.8em;
-}
-
-.schedule-checklist .task-checklist-container {
-    border: 1px solid #e3e3ea;
-    border-radius: 0.4rem;
-    overflow: hidden;
-}
-
-.schedule-checklist-empty {
-    padding: 0.5rem 0.6rem;
-    font-size: 0.85em;
-    color: #8a93a0;
-    font-style: italic;
-}
+/* The schedule dialog's checklist template section uses the shared checklist
+   component (views/core/partial/checklist.php, styled by the
+   .task-checklist-container / .checklist-* rules above), so it is identical to
+   the task dialog's — no schedule-specific checklist styles remain. */
 
 /* Header uses core .dialog-header from layout.css - no overrides needed */
 

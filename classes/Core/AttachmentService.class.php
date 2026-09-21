@@ -8,13 +8,19 @@ use Dashboard\Core\Interfaces\DatabaseInterface;
  * sticky notes and job applications.
  *
  * Storage layout mirrors ItemImageService: files live under
- * user_upload/<userId>/<YYYY>/<MM>/doc_<itemType><itemId>_<uniqid>.<ext>
+ * user_upload/<userId>/<YYYY>/<MM>/doc_<itemType><itemId>_<random>.<ext>
  * and are tracked in the polymorphic `item_attachments` table
  * (item_id + item_type discriminator).
  *
  * Security model:
- *  - Files are NEVER served statically. Downloads go through serveDownload()
- *    which re-verifies ownership, MIME and path containment on every request.
+ *  - Files are NEVER served statically: user_upload/.htaccess blocks the
+ *    document extensions and user_upload_temp/.htaccess denies the staging
+ *    directory wholesale (both files are committed — see .gitignore).
+ *    Downloads go through serveDownload(), which re-verifies ownership, MIME
+ *    and path containment on every request.
+ *  - Filenames are random (random_bytes), never uniqid(): the staging
+ *    directory is web-reachable on a host that ignores .htaccess, so names
+ *    must not be guessable.
  *  - Upload validation: PHP error codes, size cap, extension whitelist,
  *    finfo MIME check + magic-byte verification (PDF: %PDF, docx/xlsx: PK zip).
  *  - Crash-safe flow: the uploaded file is first parked in user_upload_temp/,
@@ -26,6 +32,10 @@ use Dashboard\Core\Interfaces\DatabaseInterface;
  *    escape it with Sanitize::e() on output.
  *  - docx/xlsx are never parsed server-side (zip-bomb safe): magic bytes
  *    are checked and the file is stored as opaque bytes.
+ *
+ * NOTE: Database::q() throws DatabaseException on failure — it never returns
+ * false. Every DB write below is therefore wrapped so the matching file
+ * operation can be rolled back instead of leaking an orphan file.
  */
 class AttachmentService {
     /** Root directory (absolute) that all attachment files must live under. */
@@ -111,7 +121,9 @@ class AttachmentService {
             return ['success' => false, 'message' => 'Server could not stage the upload.'];
         }
 
-        $stagedPath = $this->tempDir . 'att_' . uniqid() . '.' . $extension;
+        // Random name: the staging directory must not be guessable, in case a
+        // host ignores user_upload_temp/.htaccess and serves it statically.
+        $stagedPath = $this->tempDir . 'att_' . bin2hex(random_bytes(16)) . '.' . $extension;
         if (!move_uploaded_file($tmpName, $stagedPath)) {
             error_log('Attachment upload: failed to move uploaded file to temp: ' . $stagedPath);
             return ['success' => false, 'message' => 'Server could not stage the upload.'];
@@ -159,7 +171,7 @@ class AttachmentService {
             return false;
         }
 
-        $storedName = 'doc_' . $itemType . $itemId . '_' . uniqid() . '.' . $staged['extension'];
+        $storedName = 'doc_' . $itemType . $itemId . '_' . bin2hex(random_bytes(8)) . '.' . $staged['extension'];
         $finalPath = $uploadDir . $storedName;
 
         // Move LAST so a failure here leaves no DB row behind.
@@ -171,21 +183,24 @@ class AttachmentService {
 
         $webPath = str_replace(DIRECTORY_SEPARATOR, '/', str_replace($this->baseDir, '/user_upload/', $finalPath));
 
-        $insertResult = $this->db->q(
-            "INSERT INTO `item_attachments` (`user_id`, `item_id`, `item_type`, `original_filename`, `stored_path`, `mime_type`, `file_size`)
-             VALUES (?, ?, ?, ?, ?, ?, ?)",
-            "iissssi",
-            $userId,
-            $itemId,
-            $itemType,
-            $staged['originalFilename'],
-            $webPath,
-            $staged['mimeType'],
-            $staged['fileSize']
-        );
-
-        if ($insertResult === false) {
-            error_log('Attachment persist: failed to insert DB record for: ' . $webPath);
+        // q() throws on failure (it never returns false), so the file move has
+        // to be undone from a catch — otherwise a failed INSERT leaves an
+        // orphan file with no row pointing at it.
+        try {
+            $this->db->q(
+                "INSERT INTO `item_attachments` (`user_id`, `item_id`, `item_type`, `original_filename`, `stored_path`, `mime_type`, `file_size`)
+                 VALUES (?, ?, ?, ?, ?, ?, ?)",
+                "iissssi",
+                $userId,
+                $itemId,
+                $itemType,
+                $staged['originalFilename'],
+                $webPath,
+                $staged['mimeType'],
+                $staged['fileSize']
+            );
+        } catch (\Throwable $e) {
+            error_log('Attachment persist: DB insert failed for ' . $webPath . ': ' . $e->getMessage());
             // Roll the file move back so no orphan file remains.
             if (is_file($finalPath)) {
                 unlink($finalPath);
@@ -217,6 +232,14 @@ class AttachmentService {
 
     /**
      * Fetch all attachments for one item (newest first).
+     *
+     * VISIBILITY MODEL: attachments are listed per *uploader* (user_id), not
+     * per item. On a shared board user B therefore does not see files user A
+     * attached to the same task. That is deliberate for now (a shared item's
+     * attachments stay private to whoever uploaded them) — changing it to
+     * item-level visibility means resolving board write access here instead.
+     * Deletion, by contrast, IS item-scoped (see deleteAllForItems()), so no
+     * rows are orphaned when the item itself is removed.
      *
      * @return array<int,array<string,mixed>> Rows with id, original_filename,
      *   stored_path, mime_type, file_size, created_at.
@@ -365,10 +388,10 @@ class AttachmentService {
             $attachmentId = $this->persist($userId, $itemId, $itemType, $staged);
             if ($attachmentId !== false) {
                 $claimed++;
-                unset($_SESSION['pending_attachments'][$token]);
             }
-            // If persist() failed it cleaned up the file itself; drop the
-            // stale entry either way so it can't be retried forever.
+            // Drop the session entry either way: on success it has been
+            // claimed, on failure persist() already cleaned up the file, so a
+            // retry would only fail again.
             unset($_SESSION['pending_attachments'][$token]);
         }
         return $claimed;
@@ -463,48 +486,84 @@ class AttachmentService {
     }
 
     /**
-     * Delete a single attachment (file + DB row). Ownership must be verified
+     * Delete a single attachment (DB row + file). Ownership must be verified
      * by the caller (or pass the verified row).
+     *
+     * The row is removed first and the file second, on purpose: a file left
+     * behind is invisible junk, whereas a surviving row pointing at a missing
+     * file would show a broken download link in the UI.
      *
      * @param int   $userId       Owner id (used for path containment).
      * @param array $attachment   Row from getAttachment().
      */
     public function deleteAttachment(int $userId, array $attachment): bool {
-        $fullPath = $this->resolveStoredPath($userId, (string)$attachment['stored_path']);
-        if ($fullPath !== false && is_file($fullPath)) {
-            unlink($fullPath);
-        }
-
-        $result = $this->db->q(
+        $this->db->q(
             "DELETE FROM `item_attachments` WHERE `id` = ? AND `user_id` = ?",
             "ii",
             (int)$attachment['id'],
             $userId
         );
-        return $result !== false;
+
+        $this->removeFile($userId, (string)$attachment['stored_path']);
+
+        return true;
     }
 
     /**
-     * Delete all attachments belonging to one item (files + rows).
-     * Call from task/note/job delete flows, inside their transactions.
+     * Delete all attachments belonging to one item (rows + files).
+     * Call from task/note/job/schedule delete flows, inside their transactions.
+     *
+     * Scoped by item, NOT by uploader: on a shared board the item owner may be
+     * deleting attachments another user uploaded, and those rows/files would
+     * otherwise become unreachable orphans (their item no longer exists).
+     *
+     * @param int $userId Unused for the lookup — kept for API compatibility.
      */
     public function deleteAllForItem(int $userId, int $itemId, string $itemType): void {
-        $rows = $this->getForItem($userId, $itemId, $itemType);
-        foreach ($rows as $row) {
-            $this->deleteAttachment($userId, $row);
-        }
+        $this->deleteAllForItems($userId, [$itemId], $itemType);
     }
 
     /**
-     * Batch variant of deleteAllForItem().
+     * Batch variant of deleteAllForItem(): two statements for any number of
+     * items instead of two per attachment.
+     *
+     * Matches ItemImageService::deleteAllForItems()'s item-scoped lookup.
+     *
+     * @param int    $userId   Kept for signature symmetry with ItemImageService;
+     *                         the per-row path owner is derived from stored_path.
+     * @param int[]  $itemIds  IDs of the deleted items.
+     * @param string $itemType Discriminator stored in `item_attachments.item_type`.
      */
     public function deleteAllForItems(int $userId, array $itemIds, string $itemType): void {
         $cleanIds = array_values(array_filter(array_map('intval', $itemIds), fn($id) => $id > 0));
-        if (empty($cleanIds)) {
+        if (empty($cleanIds) || $itemType === '') {
             return;
         }
-        foreach ($cleanIds as $itemId) {
-            $this->deleteAllForItem($userId, $itemId, $itemType);
+
+        $placeholders = implode(',', array_fill(0, count($cleanIds), '?'));
+        $types = 's' . str_repeat('i', count($cleanIds));
+
+        $rows = $this->db->q(
+            "SELECT `id`, `stored_path` FROM `item_attachments`
+             WHERE `item_type` = ? AND `item_id` IN ($placeholders)",
+            $types,
+            $itemType,
+            ...$cleanIds
+        );
+
+        $this->db->q(
+            "DELETE FROM `item_attachments`
+             WHERE `item_type` = ? AND `item_id` IN ($placeholders)",
+            $types,
+            $itemType,
+            ...$cleanIds
+        );
+
+        foreach (is_array($rows) ? $rows : [] as $row) {
+            $ownerId = $this->ownerIdFromStoredPath((string)$row['stored_path']);
+            if ($ownerId > 0) {
+                $this->removeFile($ownerId, (string)$row['stored_path']);
+            }
         }
     }
 
@@ -537,7 +596,7 @@ class AttachmentService {
             }
 
             $extension = strtolower(pathinfo($sourcePath, PATHINFO_EXTENSION));
-            $storedName = 'doc_' . $toItemType . $toItemId . '_' . uniqid() . '.' . $extension;
+            $storedName = 'doc_' . $toItemType . $toItemId . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
             $targetPath = $uploadDir . $storedName;
 
             if (!copy($sourcePath, $targetPath)) {
@@ -548,21 +607,26 @@ class AttachmentService {
 
             $webPath = str_replace(DIRECTORY_SEPARATOR, '/', str_replace($this->baseDir, '/user_upload/', $targetPath));
 
-            $insertResult = $this->db->q(
-                "INSERT INTO `item_attachments` (`user_id`, `item_id`, `item_type`, `original_filename`, `stored_path`, `mime_type`, `file_size`)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)",
-                "iissssi",
-                $userId,
-                $toItemId,
-                $toItemType,
-                $row['original_filename'],
-                $webPath,
-                $row['mime_type'],
-                (int)$row['file_size']
-            );
-
-            if ($insertResult === false) {
-                unlink($targetPath);
+            // One bad row must not abort the whole copy (and must not leave the
+            // copied file behind): log, clean up, carry on with the next one.
+            try {
+                $this->db->q(
+                    "INSERT INTO `item_attachments` (`user_id`, `item_id`, `item_type`, `original_filename`, `stored_path`, `mime_type`, `file_size`)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "iissssi",
+                    $userId,
+                    $toItemId,
+                    $toItemType,
+                    $row['original_filename'],
+                    $webPath,
+                    $row['mime_type'],
+                    (int)$row['file_size']
+                );
+            } catch (\Throwable $e) {
+                error_log("Attachment copy: DB insert failed for {$webPath}: " . $e->getMessage());
+                if (is_file($targetPath)) {
+                    unlink($targetPath);
+                }
                 continue;
             }
             $copied++;
@@ -627,34 +691,45 @@ class AttachmentService {
         exit;
     }
 
-    /**
-     * Delete every attachment row + file for a user (used when a user
-     * account is removed). Also removes the user's upload directory tree.
-     */
-    public function deleteAllForUser(int $userId): void {
-        $rows = $this->db->q(
-            "SELECT `id`, `stored_path` FROM `item_attachments` WHERE `user_id` = ?",
-            "i",
-            $userId
-        );
-
-        foreach ((is_array($rows) ? $rows : []) as $row) {
-            $fullPath = $this->resolveStoredPath($userId, (string)$row['stored_path']);
-            if ($fullPath !== false && is_file($fullPath)) {
-                unlink($fullPath);
-            }
-        }
-
-        $this->db->q("DELETE FROM `item_attachments` WHERE `user_id` = ?", "i", $userId);
-    }
-
     // ------------------------------------------------------------------
     // Private helpers
     // ------------------------------------------------------------------
 
     /**
+     * Remove an attachment file (best-effort). The path is re-verified against
+     * the owning user's directory, so a tampered stored_path can never delete
+     * anything outside user_upload/<userId>/.
+     */
+    private function removeFile(int $userId, string $storedPath): void {
+        $fullPath = $this->resolveStoredPath($userId, $storedPath);
+        if ($fullPath !== false && is_file($fullPath)) {
+            unlink($fullPath);
+        }
+    }
+
+    /**
+     * Owner id encoded in a stored path ('/user_upload/<userId>/...').
+     *
+     * Item-scoped deletes may span several uploaders (shared boards), so they
+     * cannot use the caller's user id for the containment check.
+     *
+     * @return int User id, or 0 when the path has no usable prefix.
+     */
+    private function ownerIdFromStoredPath(string $storedPath): int {
+        if (preg_match('#^/user_upload/(\d+)/#', $storedPath, $matches) !== 1) {
+            return 0;
+        }
+
+        return (int)$matches[1];
+    }
+
+    /**
      * Resolve a stored web-relative path (/user_upload/<userId>/...) to an
      * absolute path, enforcing containment within the user's upload directory.
+     *
+     * Resolved against baseDir() rather than the project root, so the upload
+     * directory has a single source of truth — moving it (e.g. outside the
+     * document root) cannot silently break downloads or deletes.
      *
      * @return string|false Absolute real path, or false when invalid.
      */
@@ -667,7 +742,12 @@ class AttachmentService {
             return false;
         }
 
-        $realPath = realpath(dirname(__DIR__, 2) . $storedPath);
+        $relativePath = ltrim(substr($storedPath, strlen('/user_upload/')), '/');
+        if ($relativePath === '') {
+            return false;
+        }
+
+        $realPath = realpath($this->baseDir . $relativePath);
         if ($realPath === false) {
             return false;
         }
@@ -747,13 +827,20 @@ class AttachmentService {
 
     /**
      * Format a byte count for user-facing messages (e.g. "10 MB").
+     *
+     * Public + static so the controller renders list sizes with the same
+     * rounding rules instead of keeping a second copy of this logic.
+     *
+     * @param int $bytes     Size in bytes.
+     * @param int $precision Decimal places (0 for limit messages, 1 for the
+     *                       file list, which shows e.g. "1.5 MB").
      */
-    private function formatBytes(int $bytes): string {
+    public static function formatBytes(int $bytes, int $precision = 0): string {
         if ($bytes >= 1048576) {
-            return round($bytes / 1048576) . ' MB';
+            return round($bytes / 1048576, $precision) . ' MB';
         }
         if ($bytes >= 1024) {
-            return round($bytes / 1024) . ' KB';
+            return round($bytes / 1024, $precision) . ' KB';
         }
         return $bytes . ' B';
     }

@@ -977,6 +977,12 @@ footer {
 .modal-tab:active { cursor: grabbing; }
 .modal-tab-dragging { opacity: 0.45; }
 
+/* Tab bars without a saved-order context (e.g. "New recurring task", which
+   always renders the default order) are not reorderable — don't advertise a
+   grab cursor that promises a drag. */
+[data-modal-tabs]:not([data-tab-order-context]) .modal-tab { cursor: pointer; }
+[data-modal-tabs]:not([data-tab-order-context]) .modal-tab:active { cursor: pointer; }
+
 .modal-tab:hover { color: #374151; background-color: #f3f4f6; }
 .modal-tab:hover .modal-tab-icon { color: #475569; }
 

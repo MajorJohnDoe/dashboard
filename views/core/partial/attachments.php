@@ -33,7 +33,7 @@ $attachmentListUrl = '/attachment/list/' . $attachmentItemType . '/' . $attachme
         <button type="button" class="btn btn-dark-gray attachment-upload-btn" tabindex="-1">
             Add file&hellip;
         </button>
-        <span class="attachment-hint">PDF, txt, docx, xlsx &middot; max <?= round(_UPLOAD_MAX_BYTES / 1048576) ?> MB</span>
+        <span class="attachment-hint">PDF, txt, docx, xlsx &middot; max <?= round(effectiveUploadMaxBytes() / 1048576) ?> MB</span>
     </div>
 
     <div class="attachment-progress" hidden>

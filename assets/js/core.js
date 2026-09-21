@@ -920,15 +920,22 @@ const ModalTabsManager = (() => {
     // while the tab bar appears in dialogs on three different pages. The
     // resulting order is persisted per user + context (UiPreferenceService).
 
-    /** Mark tabs as draggable — called for tabs already in the DOM and after swaps. */
+    /**
+     * Mark tabs as draggable — called for tabs already in the DOM and after
+     * swaps. Only tab bars carrying a saved-order context are reorderable:
+     * the "New recurring task" dialog renders a fixed order, so dragging there
+     * would have nothing to persist.
+     */
     function enableTabDragging(root) {
         if (!root || !root.querySelectorAll) return;
-        root.querySelectorAll('.modal-tab').forEach(tab => { tab.draggable = true; });
+        root.querySelectorAll('[data-modal-tabs][data-tab-order-context] .modal-tab')
+            .forEach(tab => { tab.draggable = true; });
     }
 
     function handleDragStart(event) {
         const tab = event.target.closest('.modal-tab');
-        if (!tab || tab.hidden || !tab.closest('[data-modal-tabs]')) return;
+        const tabsContainer = tab && tab.closest('[data-modal-tabs]');
+        if (!tab || tab.hidden || !tabsContainer || !tabsContainer.dataset.tabOrderContext) return;
 
         draggedTab = tab;
         tab.classList.add('modal-tab-dragging');
@@ -979,9 +986,15 @@ const ModalTabsManager = (() => {
             .map(tab => tab.dataset.tab)
             .filter(Boolean);
 
-        // fetchJson already shows an error toast on failure.
+        // fetchJson already shows an error toast on transport/HTTP failure; the
+        // endpoint can also answer 200 with success:false (e.g. the preference
+        // table is missing), which must not pass silently either.
         Http.postJson(APP_ROUTES.TAB_ORDER, { context, tabs }, {
             errorMessage: 'Failed to save the tab order'
+        }).then((result) => {
+            if (result && result.success === false) {
+                Http.toastError(result.message || 'Failed to save the tab order');
+            }
         }).catch(() => {});
     }
 
@@ -1054,12 +1067,45 @@ const ModalTabsManager = (() => {
     }
 
     /**
+     * Parse the HX-Trigger header of an XHR into a plain object.
+     *
+     * The upload endpoint returns HTTP 200 for logical failures too (it signals
+     * them with a toast trigger), so callers must decide success from the
+     * payload, not from xhr.status.
+     *
+     * @param {XMLHttpRequest} xhr
+     * @return {Object} Event name => detail map, or {} when absent/unparsable.
+     */
+    function parseTriggerHeader(xhr) {
+        const header = xhr.getResponseHeader('HX-Trigger');
+        if (!header) return {};
+
+        try {
+            return JSON.parse(header) || {};
+        } catch (parseError) {
+            console.error('Invalid HX-Trigger header', parseError);
+            return {};
+        }
+    }
+
+    /** Re-dispatch server triggers as DOM events (htmx does this for htmx calls). */
+    function dispatchTriggers(triggers) {
+        Object.entries(triggers).forEach(([eventName, detail]) => {
+            document.body.dispatchEvent(new CustomEvent(eventName, { detail }));
+        });
+    }
+
+    /**
      * Attachment uploads: file input change → POST via fetch with progress.
      * The upload URL lives on the hidden file input (data-upload-url).
      */
     function handleFileSelected(event) {
         const input = event.target.closest('.attachment-file-input');
         if (!input || !input.files || input.files.length === 0) return;
+
+        // One upload per pane at a time: a second XHR would race the first and
+        // leave the badge/list out of step.
+        if (input.dataset.uploading === 'true') return;
 
         const file = input.files[0];
         const url = input.dataset.uploadUrl;
@@ -1085,6 +1131,8 @@ const ModalTabsManager = (() => {
         formData.append('attachment', file, file.name);
         formData.append('csrf_token', Csrf.getToken());
 
+        input.dataset.uploading = 'true';
+        input.disabled = true;
         if (uploadBtn) uploadBtn.disabled = true;
         if (progress) progress.hidden = false;
 
@@ -1101,43 +1149,45 @@ const ModalTabsManager = (() => {
             }
         });
 
-        xhr.addEventListener('load', () => {
+        /** Shared cleanup for the load/error paths. */
+        const finish = () => {
+            delete input.dataset.uploading;
+            input.disabled = false;
             if (uploadBtn) uploadBtn.disabled = false;
             if (progress) progress.hidden = true;
             if (progressBar) progressBar.style.setProperty('--progress', '0%');
             input.value = '';
+        };
 
-            // triggerResponse endpoints return JSON with HX-Trigger; fire manually
-            const triggerHeader = xhr.getResponseHeader('HX-Trigger');
-            if (triggerHeader) {
-                try {
-                    const triggers = JSON.parse(triggerHeader);
-                    Object.entries(triggers).forEach(([eventName, detail]) => {
-                        document.body.dispatchEvent(new CustomEvent(eventName, { detail }));
-                    });
-                } catch (parseError) {
-                    console.error('Invalid HX-Trigger header', parseError);
-                }
-            }
+        xhr.addEventListener('load', () => {
+            finish();
 
-            if (xhr.status !== 200) {
-                Http.toastError(`Upload failed (HTTP ${xhr.status})`);
+            const triggers = parseTriggerHeader(xhr);
+            dispatchTriggers(triggers);
+
+            // Success is signalled by the attachmentsUpdate trigger, NOT by the
+            // status code: validation errors also come back as HTTP 200 with an
+            // error toast (and must not bump the badge).
+            const accepted = Boolean(triggers[HTMX_EVENTS.ATTACHMENTS_UPDATE]);
+            const serverToasted = Boolean(triggers[HTMX_EVENTS.GLOBAL_MESSAGE]);
+
+            if (!accepted && !serverToasted) {
+                Http.toastError(xhr.status === 200 ? 'Upload failed.' : `Upload failed (HTTP ${xhr.status})`);
             }
 
             maybeStorePendingToken(pane, xhr);
 
-            // The server-rendered badge count is only correct on first paint —
-            // keep it in step with the file that was just accepted.
-            if (xhr.status === 200) {
+            if (accepted) {
+                // The server-rendered badge count is only correct on first paint —
+                // keep it in step with the file that was just accepted. The list
+                // refresh (attachmentsUpdate) re-syncs it to the exact count.
                 const modal = input.closest('.modal-container');
                 incrementBadge(modal && modal.querySelector('[data-modal-tabs]'), 'attachments');
             }
         });
 
         xhr.addEventListener('error', () => {
-            if (uploadBtn) uploadBtn.disabled = false;
-            if (progress) progress.hidden = true;
-            input.value = '';
+            finish();
             Http.toastError('Network error during upload');
         });
 
@@ -1189,10 +1239,25 @@ const ModalTabsManager = (() => {
      * dropping starts the upload. preventDefault stops the browser from
      * opening the file.
      */
-    function initDragAndDrop() {
-        const dragDepth = new WeakMap(); // modal-container -> enter depth
+    /**
+     * Is this drag event carrying files? Only those may show the drop overlay —
+     * the tab bar uses HTML5 drag events too (ModalTabsManager reorder), and a
+     * tab drag must not advertise "Drop file to attach".
+     *
+     * @param {DragEvent} event
+     * @return {boolean}
+     */
+    function isFileDrag(event) {
+        if (!event.dataTransfer) return false;
 
+        const types = Array.from(event.dataTransfer.types || []);
+        return types.includes('Files');
+    }
+
+    function initDragAndDrop() {
         document.body.addEventListener('dragover', (event) => {
+            if (draggedTab || !isFileDrag(event)) return;
+
             const modal = event.target.closest && event.target.closest('.modal-container');
             if (!modal || !modal.querySelector('.attachments-pane')) return;
             event.preventDefault();
@@ -1200,6 +1265,8 @@ const ModalTabsManager = (() => {
         });
 
         document.body.addEventListener('dragleave', (event) => {
+            if (draggedTab) return;
+
             const modal = event.target.closest && event.target.closest('.modal-container');
             if (!modal) return;
             // Only hide when the pointer actually left the modal
@@ -1210,6 +1277,7 @@ const ModalTabsManager = (() => {
             const modal = event.target.closest && event.target.closest('.modal-container');
             if (!modal) return;
             hideOverlay(modal);
+            if (draggedTab || !isFileDrag(event)) return;
             if (!modal.querySelector('.attachments-pane')) return;
             event.preventDefault();
 
@@ -1221,16 +1289,15 @@ const ModalTabsManager = (() => {
             revealTab(tabs, 'attachments');
 
             const input = modal.querySelector('.attachment-file-input');
-            if (input) {
-                // DataTransfer.files is assignable in modern browsers
-                try {
-                    input.files = files;
-                } catch (e) {
-                    // Fallback: dispatch upload directly with the file
-                    uploadFileDirect(input, files[0]);
-                    return;
-                }
+            if (!input) return;
+
+            // DataTransfer.files is assignable in modern browsers; if it is not,
+            // say so instead of silently doing nothing.
+            try {
+                input.files = files;
                 input.dispatchEvent(new Event('change', { bubbles: true }));
+            } catch (e) {
+                Http.toastError('Your browser could not attach the dropped file. Use "Add file…" instead.');
             }
         });
     }
@@ -1251,16 +1318,6 @@ const ModalTabsManager = (() => {
     function hideOverlay(modal) {
         const overlay = modal.querySelector('.modal-drop-overlay');
         if (overlay) overlay.remove();
-    }
-
-    /** Direct upload fallback when input.files is not assignable. */
-    function uploadFileDirect(input, file) {
-        const fakeEvent = { target: input, files: [file] };
-        // Reuse the change handler by simulating a selection
-        const dt = new DataTransfer();
-        dt.items.add(file);
-        input.files = dt.files;
-        input.dispatchEvent(new Event('change', { bubbles: true }));
     }
 
     function init() {

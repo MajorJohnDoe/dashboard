@@ -228,6 +228,38 @@ function svgIcon($name, array $attributes = array()) {
 }
 
 
+/**
+ * Application upload limit in bytes (_UPLOAD_MAX_BYTES from config.php).
+ *
+ * config.php is not under version control, so a deployment that has not added
+ * the constant yet must not fatal. `??` does NOT help here — an undefined
+ * constant is a PHP 8 Error, not a null — hence the explicit defined() check.
+ *
+ * @return int Bytes (falls back to 10 MB).
+ */
+function uploadMaxBytes(): int {
+    return defined('_UPLOAD_MAX_BYTES') ? (int)_UPLOAD_MAX_BYTES : 10485760;
+}
+
+/**
+ * Effective upload ceiling in bytes: the smaller of the application limit and
+ * php.ini's post_max_size.
+ *
+ * PHP discards $_POST and $_FILES entirely when a request body exceeds
+ * post_max_size, so that value — not _UPLOAD_MAX_BYTES — is the real ceiling
+ * the client should validate against. Falls back to the application limit when
+ * post_max_size is unreadable or unlimited (-1/0), so the result is never 0.
+ *
+ * @return int Bytes, always > 0.
+ */
+function effectiveUploadMaxBytes(): int {
+    $appMax = uploadMaxBytes();
+    $postMax = \Dashboard\Core\UploadSizeGuard::iniBytes('post_max_size');
+
+    return $postMax > 0 ? min($appMax, $postMax) : $appMax;
+}
+
+
 function adjustHexColorBrightness($hex, $steps) {
     // Steps should be between -255 and 255. Negative = darker, positive = lighter
     $steps = max(-255, min(255, $steps));

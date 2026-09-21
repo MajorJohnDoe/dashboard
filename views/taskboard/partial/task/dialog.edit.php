@@ -1,6 +1,7 @@
 <?php
 use Dashboard\Core\Sanitize;
 use Dashboard\Core\HtmxEvents;
+use Dashboard\Core\AttachmentService;
 use Dashboard\Taskboard\TaskController;
 use Dashboard\Taskboard\ColumnController;
 
@@ -27,7 +28,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
         }
 
         // Attachment count for the tab badge (0 hides the Attachments tab)
-        $attachmentService = new \Dashboard\Core\AttachmentService($db);
+        $attachmentService = new AttachmentService($db);
         $taskAttachmentCount = $attachmentService->countForItem((int)$user->getUserId(), (int)$_GET['task_id'], 'task');
     }
 
@@ -161,7 +162,8 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                 </div>
                                 <div class="flex-row">
                                     <div class="flex-cell flex-cell-shrink flex-vertical-center" style="position: relative;">
-                                        <div style="position: relative;">
+                                        <div class="label-search-field">
+                                            <?= svgIcon('tag', ['class' => 'label-search-icon']) ?>
                                             <input 
                                                 class="label-search-input"
                                                 autocomplete="off"
@@ -206,10 +208,12 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
                                 // attachments as a count (+ staged pending files).
                                 $checklistItemCount = $hasChecklist ? count(json_decode($taskChecklist, true) ?: []) : 0;
                                 // New-task mode: show the Attachments tab when there are
-                                // staged pending files (modal re-opened mid-flow).
-                                $pendingCount = ($taskIdForTabs === 0)
-                                    ? count((new \Dashboard\Core\AttachmentService($db))->getPending((int)$user->getUserId(), 'task'))
-                                    : 0;
+                                // staged pending files (modal re-opened mid-flow). Loaded
+                                // once here and reused for the hidden token fields below.
+                                $pendingAttachments = ($taskIdForTabs === 0)
+                                    ? (new AttachmentService($db))->getPending((int)$user->getUserId(), 'task')
+                                    : [];
+                                $pendingCount = count($pendingAttachments);
                                 $attachmentTabCount = (int)($taskAttachmentCount ?? 0) + $pendingCount;
                                 $hasAttachments = $attachmentTabCount > 0;
                                 ?>
@@ -295,8 +299,7 @@ if($_GET['action'] == 'new' && isset($_GET['column_id'])) {
 
                                     if ($taskIdForTabs === 0) {
                                         // Pre-existing pending files (e.g. modal re-opened mid-flow)
-                                        $pendingList = (new \Dashboard\Core\AttachmentService($db))->getPending((int)$user->getUserId(), 'task');
-                                        foreach (array_keys($pendingList) as $pendingToken) {
+                                        foreach (array_keys($pendingAttachments) as $pendingToken) {
                                             echo '<input type="hidden" name="pending_attachments[]" value="' . Sanitize::e($pendingToken) . '">';
                                         }
                                     }

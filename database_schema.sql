@@ -90,13 +90,15 @@ CREATE TABLE `shared_item_images` (
 
 -- Document attachments (PDF, txt, docx, xlsx) for tasks, sticky notes and
 -- job applications. Polymorphic item_id + item_type discriminator, same
--- pattern as shared_item_images. Files live under user_upload/<userId>/...
--- and are served ONLY through the authenticated /attachment/download route.
+-- pattern as shared_item_images — including item_type as a varchar, NOT an
+-- enum, so a new owner type (e.g. 'schedule' for recurring templates) needs
+-- no DDL change. Files live under user_upload/<userId>/... and are served
+-- ONLY through the authenticated /attachment/download route.
 CREATE TABLE IF NOT EXISTS `item_attachments` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `user_id` int(11) NOT NULL,
   `item_id` int(11) NOT NULL,
-  `item_type` ENUM('task', 'stickynote', 'job') NOT NULL,
+  `item_type` varchar(20) NOT NULL COMMENT 'task | stickynote | job | schedule',
   `original_filename` VARCHAR(255) NOT NULL,
   `stored_path` VARCHAR(255) NOT NULL COMMENT 'Web-relative path, e.g. /user_upload/1/2026/01/doc_task12_xxx.pdf',
   `mime_type` VARCHAR(100) NOT NULL,
@@ -106,6 +108,12 @@ CREATE TABLE IF NOT EXISTS `item_attachments` (
   KEY `idx_item` (`item_type`, `item_id`),
   KEY `idx_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Upgrade note for installations created while item_type was still
+-- ENUM('task','stickynote','job'): that enum rejected the 'schedule' rows
+-- written by the recurring-task copy flows, so widen it to match the schema
+-- above (run once):
+--   ALTER TABLE `item_attachments` MODIFY `item_type` varchar(20) NOT NULL;
 
 
 CREATE TABLE `sticky_categories` (

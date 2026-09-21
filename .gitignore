@@ -15,8 +15,13 @@ config.php
 user_upload/*
 logs/*
 !user_upload/.gitkeep
+# The access rules for upload directories MUST be committed: without them a
+# fresh deployment serves documents statically, bypassing the authenticated
+# /attachment/download route.
+!user_upload/.htaccess
 user_upload_temp/*
 !user_upload_temp/.gitkeep
+!user_upload_temp/.htaccess
 AGENTS.md
 
 # Ignore skills
